@@ -1,0 +1,28 @@
+{
+  "description": "Neos CMS plugin for managing content revisions",
+  "type": "neos-plugin",
+  "name": "codeq/revisions",
+  "license": "MIT",
+  "keywords": [
+    "flow",
+    "neoscms",
+    "revisions"
+  ],
+  "require": {
+    "php": ">=7.4",
+    "neos/neos": "^5.3 || ^7.0 || dev-master",
+    "neos/neos-ui": "^5.3 || ^7.0 || dev-master",
+    "ext-bz2": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "CodeQ\\Revisions\\": "Classes"
+    }
+  },
+  "extra": {
+    "neos": {
+      "package-key": "CodeQ.Revisions"
+    }
+  }
+}
+
