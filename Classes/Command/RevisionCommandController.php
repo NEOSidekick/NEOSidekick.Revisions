@@ -7,6 +7,7 @@ use Neos\ContentRepository\Domain\Service\ContextFactoryInterface;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Cli\CommandController;
 use CodeQ\Revisions\Service\RevisionService;
+use Neos\Flow\Persistence\PersistenceManagerInterface;
 
 /**
  *
@@ -25,6 +26,12 @@ class RevisionCommandController extends CommandController
      * @var RevisionService
      */
     protected $revisionService;
+
+    /**
+     * @Flow\Inject
+     * @var PersistenceManagerInterface
+     */
+    protected $persistenceManager;
 
     /**
      * Create revision for the given nodePath
@@ -67,8 +74,39 @@ class RevisionCommandController extends CommandController
         } else {
             $this->outputLine("\nRevisions found:\n");
             foreach ($result as $revision) {
-                $this->outputLine('%s - %s', [$revision->getCreator(), $revision->getCreationDateTime()->format('Y-m-d H:i:s')]);
+                $this->outputLine('%s - %s - %s', [
+                    $revision->getCreator(),
+                    $revision->getCreationDateTime()->format('Y-m-d H:i:s'),
+                    $this->persistenceManager->getIdentifierByObject($revision),
+                ]);
             }
+        }
+    }
+
+    public function applyCommand(string $revisionIdentifier): void
+    {
+        $revision = $this->revisionService->getRevision($revisionIdentifier);
+
+        if ($revision === null) {
+            $this->outputLine('Revision not found');
+            $this->quit(1);
+        }
+
+        $node = $this->contextFactory->create()->getNodeByIdentifier($revision->getNodeIdentifier());
+
+        if (!$node) {
+            $this->outputLine('Node for revision not found');
+            $this->quit(1);
+        }
+
+        $this->outputLine('Applying revision "%s"', [$revisionIdentifier]);
+        $result = $this->revisionService->applyRevision($revisionIdentifier, $node->getParentPath());
+
+        if ($result === null) {
+            $this->outputLine('Revision could not be applied');
+            $this->quit(1);
+        } else {
+            $this->outputLine('Revision applied');
         }
     }
 }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace CodeQ\Revisions\Service;
 
 use Neos\ContentRepository\Domain\Model\NodeInterface;
+use Neos\ContentRepository\Domain\Service\ImportExport\NodeImportService;
+use Neos\ContentRepository\Exception\ImportException;
 use Neos\Flow\Annotations as Flow;
 use CodeQ\Revisions\Domain\Model\Revision;
 use CodeQ\Revisions\Domain\Repository\RevisionRepository;
@@ -34,6 +36,12 @@ class RevisionService
      */
     protected $securityContext;
 
+    /**
+     * @Flow\Inject
+     * @var NodeImportService
+     */
+    protected $nodeImportService;
+
     public function createRevision(NodeInterface $node): ?Revision
     {
         $xmlWriter = $this->nodeExportService->export($node->getPath());
@@ -63,9 +71,25 @@ class RevisionService
         return $this->revisionRepository->findByNodeIdentifier($node->getIdentifier())->toArray();
     }
 
-    public function getRevision(string $revision): Revision
+    public function getRevision(string $identifier): ?Revision
     {
-        return $this->revisionRepository->findByIdentifier($revision);
+        return $this->revisionRepository->findByIdentifier($identifier);
+    }
+
+    public function applyRevision(string $identifier, string $nodePath): bool
+    {
+        $revision = $this->getRevision($identifier);
+
+        if (!$revision) {
+            return false;
+        }
+
+        try {
+            $this->nodeImportService->import($revision->getContent(), $nodePath);
+        } catch (ImportException $e) {
+            return false;
+        }
+        return true;
     }
 
 }

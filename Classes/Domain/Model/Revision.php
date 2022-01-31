@@ -57,9 +57,14 @@ class Revision
         return $this->creator;
     }
 
-    public function getContent(): string
+    public function getContent(): ?\XMLReader
     {
-        return bzdecompress($this->content);
+        $content = bzdecompress(stream_get_contents($this->content));
+
+        $xmlReader = new \XMLReader();
+        $result = $xmlReader::xml($content, null, LIBXML_PARSEHUGE);
+
+        return !is_bool($result) ? $result : null;
     }
 
 }
