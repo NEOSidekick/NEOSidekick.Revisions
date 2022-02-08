@@ -1,0 +1,16 @@
+Neos:
+  Flow:
+    mvc:
+      routes:
+        'CodeQ.Revisions':
+          position: 'before Neos.Neos'
+
+    security:
+      authentication:
+        providers:
+          'Neos.Neos:Backend':
+            requestPatterns:
+              'CodeQ:Revisions':
+                pattern: ControllerObjectName
+                patternOptions:
+                  controllerObjectNamePattern: 'CodeQ\Revisions\Controller\.*'

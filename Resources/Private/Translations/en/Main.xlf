@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+    <file original="" product-name="CodeQ.Revisions" source-language="en" datatype="plaintext">
+        <body>
+            <trans-unit id="header.label">
+                <source>Label</source>
+            </trans-unit>
+            <trans-unit id="header.actions">
+                <source>Actions</source>
+            </trans-unit>
+            <trans-unit id="header.identifier">
+                <source>Identifier</source>
+            </trans-unit>
+            <trans-unit id="header.creator">
+                <source>Creator</source>
+            </trans-unit>
+            <trans-unit id="header.revision">
+                <source>Revision</source>
+            </trans-unit>
+
+            <trans-unit id="action.close">
+                <source>Close</source>
+            </trans-unit>
+            <trans-unit id="action.apply">
+                <source>Apply</source>
+            </trans-unit>
+
+            <trans-unit id="success.revisionsApplied">
+                <source>Revision applied</source>
+            </trans-unit>
+            <trans-unit id="success.revisionsUpdated">
+                <source>Revision updated</source>
+            </trans-unit>
+
+            <trans-unit id="error.failedFetchingExpressions">
+                <source>An error occurred while fetching revisions.</source>
+            </trans-unit>
+            <trans-unit id="error.failedApplyingRevision">
+                <source>An error occurred while applying revision.</source>
+            </trans-unit>
+            <trans-unit id="error.failedUpdatingRevision">
+                <source>An error occurred while updating revision.</source>
+            </trans-unit>
+        </body>
+    </file>
+</xliff>

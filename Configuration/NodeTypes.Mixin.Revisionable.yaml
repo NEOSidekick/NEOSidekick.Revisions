@@ -1,0 +1,17 @@
+CodeQ.Revisions:Mixin.Revisionable:
+  abstract: true
+  ui:
+    inspector:
+      groups:
+        revisions:
+          tab: 'meta'
+          label: i18n
+          icon: 'code-branch'
+          collapsed: true
+      views:
+        revisions:
+          label: i18n
+          group: 'revisions'
+          view: 'CodeQ.Revisions/Inspector/Views/RevisionsView'
+          position: 'start'
+

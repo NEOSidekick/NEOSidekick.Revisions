@@ -3,6 +3,16 @@ declare(strict_types=1);
 
 namespace CodeQ\Revisions\Service;
 
+/**
+ * This file is part of the CodeQ.Revisions package.
+ *
+ * (c) 2022 CodeQ
+ *
+ * This package is Open Source Software. For the full copyright and license
+ * information, please view the LICENSE file which was distributed with this
+ * source code.
+ */
+
 use Neos\ContentRepository\Domain\Model\NodeData;
 use Neos\ContentRepository\Domain\Repository\WorkspaceRepository;
 use Neos\ContentRepository\Domain\Service\ImportExport\ImportExportPropertyMappingConfiguration;

@@ -1,0 +1,25 @@
+{
+  "name": "revisions",
+  "version": "1.0.0",
+  "license": "proprietary",
+  "private": true,
+  "scripts": {
+    "build": "NODE_ENV=production neos-react-scripts build",
+    "watch": "neos-react-scripts watch"
+  },
+  "dependencies": {
+    "@neos-project/neos-ui-extensibility": "^5.3.4",
+    "plow-js": "^2.2.0"
+  },
+  "neos": {
+    "buildTargetDirectory": "../../../Public/Assets"
+  },
+  "devDependencies": {
+    "patch-package": "^6.4.7",
+    "react": "^16.14.0",
+    "react-redux": "^7.2.6",
+    "@neos-project/react-ui-components": "^5.3.13",
+    "@types/react": "^16.14.0",
+    "@types/react-redux": "^7.1.22"
+  }
+}

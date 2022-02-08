@@ -3,10 +3,22 @@ declare(strict_types=1);
 
 namespace CodeQ\Revisions\Command;
 
+/**
+ * This file is part of the CodeQ.Revisions package.
+ *
+ * (c) 2022 CodeQ
+ *
+ * This package is Open Source Software. For the full copyright and license
+ * information, please view the LICENSE file which was distributed with this
+ * source code.
+ */
+
+use CodeQ\Revisions\Domain\Model\Revision;
 use Neos\ContentRepository\Domain\Service\ContextFactoryInterface;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Cli\CommandController;
 use CodeQ\Revisions\Service\RevisionService;
+use Neos\Flow\Cli\Exception\StopCommandException;
 use Neos\Flow\Persistence\PersistenceManagerInterface;
 
 /**
@@ -35,6 +47,7 @@ class RevisionCommandController extends CommandController
 
     /**
      * Create revision for the given nodePath
+     * @throws StopCommandException
      */
     public function createCommand(string $nodeIdentifier): void
     {
@@ -56,6 +69,11 @@ class RevisionCommandController extends CommandController
         }
     }
 
+    /**
+     * List all revisions for the given node identifier
+     *
+     * @throws StopCommandException
+     */
     public function listCommand(string $nodeIdentifier): void
     {
         $node = $this->contextFactory->create()->getNodeByIdentifier($nodeIdentifier);
@@ -72,17 +90,25 @@ class RevisionCommandController extends CommandController
             $this->outputLine('No revisions found');
             $this->quit(1);
         } else {
-            $this->outputLine("\nRevisions found:\n");
-            foreach ($result as $revision) {
-                $this->outputLine('%s - %s - %s', [
-                    $revision->getCreator(),
+            $rows = array_map(function (Revision $revision) {
+                return [
                     $revision->getCreationDateTime()->format('Y-m-d H:i:s'),
+                    $revision->getLabel(),
+                    $revision->getCreator(),
                     $this->persistenceManager->getIdentifierByObject($revision),
-                ]);
-            }
+                ];
+            }, $result);
+
+            $this->outputLine("\nRevisions found:\n");
+            $this->output->outputTable($rows, ['Creation Date', 'Label', 'Creator', 'Identifier']);
         }
     }
 
+    /**
+     * Apply a specific revision to the node it was created from
+     *
+     * @throws StopCommandException
+     */
     public function applyCommand(string $revisionIdentifier): void
     {
         $revision = $this->revisionService->getRevision($revisionIdentifier);
@@ -99,10 +125,23 @@ class RevisionCommandController extends CommandController
             $this->quit(1);
         }
 
+        if (!$this->output->askConfirmation(
+            sprintf(
+                'Do you really want to apply revision "%s" to node "%s" with identifier "%s"?',
+                $revisionIdentifier,
+                $node->getLabel(),
+                $node->getIdentifier()
+            ),
+            false
+        )) {
+            $this->outputLine('Aborted');
+            $this->quit(1);
+        }
+
         $this->outputLine('Applying revision "%s"', [$revisionIdentifier]);
         $result = $this->revisionService->applyRevision($revisionIdentifier, $node->getParentPath());
 
-        if ($result === null) {
+        if (!$result) {
             $this->outputLine('Revision could not be applied');
             $this->quit(1);
         } else {

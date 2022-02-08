@@ -1,0 +1,13 @@
+Neos:
+  Neos:
+    Ui:
+      resources:
+        javascript:
+          CodeQ.Revisions:RevisionsView:
+            resource: 'resource://CodeQ.Revisions/Public/Assets/Plugin.js'
+    userInterface:
+      translation:
+        autoInclude:
+          CodeQ.Revisions:
+            - 'NodeTypes/*'
+            - 'Main'

@@ -1,0 +1,8 @@
+- name: 'CodeQ.Revisions:Revisions'
+  uriPattern: 'neos/codeq/revisions/{@action}'
+  defaults:
+    '@package': 'CodeQ.Revisions'
+    '@controller': 'Revisions'
+    '@format': 'json'
+    '@action': 'get'
+  appendExceedingArguments: true
