@@ -145,29 +145,41 @@ const RevisionList: React.FC<Props> = ({ documentNode, addFlashMessage, reloadDo
                         </tr>
                     </thead>
                     <tbody>
-                        {revisions.map((revision) => (
-                            <tr key={revision.creationDateTime}>
-                                <td title={`Created on ${formatRevisionDate(revision)} by ${revision.creator}`}>
-                                    {revision.label || formatRevisionDate(revision)}
-                                </td>
-                                <td style={{ textAlign: 'center' }}>
-                                    <IconButton
-                                        onClick={() => setSelectedRevision(revision)}
-                                        icon="edit"
-                                        style="primary"
-                                        size="small"
-                                        title={`Edit revision ${formatRevisionDate(revision)} by ${revision.creator}`}
-                                    />
-                                    <IconButton
-                                        onClick={() => applyRevision(revision)}
-                                        icon="check"
-                                        style="primary"
-                                        size="small"
-                                        title={`Apply revision ${formatRevisionDate(revision)} by ${revision.creator}`}
-                                    />
+                        {revisions.length ? (
+                            revisions.map((revision) => (
+                                <tr key={revision.creationDateTime}>
+                                    <td title={`Created on ${formatRevisionDate(revision)} by ${revision.creator}`}>
+                                        {revision.label || formatRevisionDate(revision)}
+                                    </td>
+                                    <td style={{ textAlign: 'center' }}>
+                                        <IconButton
+                                            onClick={() => setSelectedRevision(revision)}
+                                            icon="edit"
+                                            style="primary"
+                                            size="small"
+                                            title={`Edit revision ${formatRevisionDate(revision)} by ${
+                                                revision.creator
+                                            }`}
+                                        />
+                                        <IconButton
+                                            onClick={() => applyRevision(revision)}
+                                            icon="check"
+                                            style="primary"
+                                            size="small"
+                                            title={`Apply revision ${formatRevisionDate(revision)} by ${
+                                                revision.creator
+                                            }`}
+                                        />
+                                    </td>
+                                </tr>
+                            ))
+                        ) : (
+                            <tr>
+                                <td colSpan={2}>
+                                    <em>{translate('list.noRevisionsFound')}</em>
                                 </td>
                             </tr>
-                        ))}
+                        )}
                     </tbody>
                 </table>
             )}

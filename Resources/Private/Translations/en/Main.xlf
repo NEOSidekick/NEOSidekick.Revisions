@@ -18,6 +18,10 @@
                 <source>Revision</source>
             </trans-unit>
 
+            <trans-unit id="list.noRevisionsFound">
+                <source>No revisions found</source>
+            </trans-unit>
+
             <trans-unit id="action.close">
                 <source>Close</source>
             </trans-unit>
