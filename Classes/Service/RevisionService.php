@@ -198,4 +198,12 @@ class RevisionService
         $this->persistenceManager->persistAll();
     }
 
+    /**
+     * Removes all stored revisions for all nodes
+     */
+    public function flush()
+    {
+        $this->revisionRepository->removeAll();
+    }
+
 }

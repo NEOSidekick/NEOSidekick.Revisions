@@ -148,4 +148,14 @@ class RevisionCommandController extends CommandController
             $this->outputLine('Revision applied');
         }
     }
+
+    public function flushCommand(): void
+    {
+        if (!$this->output->askConfirmation('Do you really want to flush all revisions? [y/N]', false)) {
+            $this->outputLine('Aborted');
+            $this->quit(1);
+        }
+        $this->revisionService->flush();
+        $this->outputLine('Revisions flushed');
+    }
 }
