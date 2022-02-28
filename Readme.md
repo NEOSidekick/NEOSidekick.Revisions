@@ -1,14 +1,17 @@
 [![Latest Stable Version](https://poser.pugx.org/codeq/revisions/v/stable)](https://packagist.org/packages/codeq/revisions)
 [![License](https://poser.pugx.org/codeq/revisions/license)](LICENSE)
 
-# Code Q Revisions
+# IN DEVELOPMENT: Code Q Revisions
 
-After this plugin is installed in your Neos CMS project, it will automatically create revisions of pages including 
-their content when publishing content to live.
+The revisions package will automatically create revisions of pages including their content every time changes are 
+published to live.
 
-Afterwards you can select existing revisions in the inspector for each page and revert to them.
+This enables you to understand which editor published which changes, and you can select existing revisions in the 
+inspector for each page and revert to them.
 
-Also, CLI commands exist to list, apply and remove revisions.
+We also offer CLI commands to list, apply and remove revisions.
+
+Note: The package will be commercially licensed to cover development costs.
 
 ## Installation
 
