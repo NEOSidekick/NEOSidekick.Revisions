@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+    <file original="" product-name="CodeQ.Revisions" source-language="en" target-language="de" datatype="plaintext">
+        <body>
+            <trans-unit id="groups.revisions">
+                <source>Revisions</source>
+                <target>Revisionen</target>
+            </trans-unit>
+            <trans-unit id="views.revisions">
+                <source>Available revisions for this document</source>
+                <target>Verfügbare Revisionen für dieses Dokument</target>
+            </trans-unit>
+        </body>
+    </file>
+</xliff>

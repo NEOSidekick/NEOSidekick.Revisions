@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+    <file original="" product-name="CodeQ.Revisions" source-language="en" target-language="de" datatype="plaintext">
+        <body>
+            <trans-unit id="header.label">
+                <source>Label</source>
+                <target>Bezeichnung</target>
+            </trans-unit>
+            <trans-unit id="header.actions">
+                <source>Actions</source>
+                <target>Aktionen</target>
+            </trans-unit>
+            <trans-unit id="header.identifier">
+                <source>Identifier</source>
+                <target>Kennung</target>
+            </trans-unit>
+            <trans-unit id="header.creator">
+                <source>Creator</source>
+                <target>Ersteller</target>
+            </trans-unit>
+            <trans-unit id="header.revision">
+                <source>Revision</source>
+                <target>Revision</target>
+            </trans-unit>
+
+            <trans-unit id="list.noRevisionsFound">
+                <source>No revisions found</source>
+                <target>Keine Revisionen gefunden</target>
+            </trans-unit>
+
+            <trans-unit id="action.close">
+                <source>Close</source>
+                <target>Schließen</target>
+            </trans-unit>
+            <trans-unit id="action.apply">
+                <source>Apply</source>
+                <target>Anwenden</target>
+            </trans-unit>
+
+            <trans-unit id="success.revisionApplied">
+                <source>Revision applied</source>
+                <target>Revision angewandt</target>
+            </trans-unit>
+            <trans-unit id="success.revisionDeleted">
+                <source>Revision deleted</source>
+                <target>Revision gelöscht</target>
+            </trans-unit>
+            <trans-unit id="success.revisionUpdated">
+                <source>Revision updated</source>
+                <target>Revision aktualisiert</target>
+            </trans-unit>
+
+            <trans-unit id="error.failedFetchingExpressions">
+                <source>An error occurred while fetching revisions.</source>
+                <target>Beim Abrufen von Revisionen ist ein Fehler aufgetreten.</target>
+            </trans-unit>
+            <trans-unit id="error.failedApplyingRevision">
+                <source>An error occurred while applying revision.</source>
+                <target>Bei der Anwendung der Revision ist ein Fehler aufgetreten.</target>
+            </trans-unit>
+            <trans-unit id="error.failedUpdatingRevision">
+                <source>An error occurred while updating revision.</source>
+                <target>Beim Aktualisieren der Revision ist ein Fehler aufgetreten.</target>
+            </trans-unit>
+            <trans-unit id="error.failedDeletingRevision">
+                <source>An error occurred while deleting a revision.</source>
+                <target>Beim Löschen einer Revision ist ein Fehler aufgetreten.</target>
+            </trans-unit>
+        </body>
+    </file>
+</xliff>
