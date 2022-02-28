@@ -2,7 +2,6 @@
   "description": "Neos CMS plugin for managing content revisions",
   "type": "neos-plugin",
   "name": "codeq/revisions",
-  "license": "MIT",
   "keywords": [
     "flow",
     "neoscms",
