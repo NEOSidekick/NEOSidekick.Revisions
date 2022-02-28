@@ -74,6 +74,19 @@ class RevisionsController extends ActionController
         ]);
     }
 
+    public function deleteAction(Revision $revision = null): void
+    {
+        if (!$revision) {
+            $this->throwStatus(404, 'Revision not found');
+        }
+
+        $this->revisionService->deleteRevision($revision->getIdentifier());
+
+        $this->view->assign('value', [
+            'success' => true,
+        ]);
+    }
+
     public function setLabelAction(Revision $revision = null, string $label = ''): void
     {
         if (!$revision) {

@@ -19,6 +19,13 @@ type ApplyRevisionProps = {
     };
 };
 
+type DeleteRevisionProps = {
+    action: 'delete';
+    params: {
+        revision: Revision;
+    };
+};
+
 type SetLabelProps = {
     action: 'setlabel';
     params: {
@@ -27,7 +34,7 @@ type SetLabelProps = {
     };
 };
 
-type FetchProps = GetRevisionsProps | ApplyRevisionProps | SetLabelProps;
+type FetchProps = GetRevisionsProps | ApplyRevisionProps | DeleteRevisionProps | SetLabelProps;
 
 export default function fetchFromBackend(props: FetchProps): Promise<{ revisions: Revision[] }> {
     // Cannot use URL object here due to missing Safari support

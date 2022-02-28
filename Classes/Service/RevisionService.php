@@ -55,7 +55,7 @@ class RevisionService
     protected $persistenceManager;
 
     /**
-     * @var array
+     * @var array<string, NodeInterface>
      */
     protected static $nodesForRevisions = [];
 
@@ -187,6 +187,15 @@ class RevisionService
         }
     }
 
+    public function deleteRevision(string $getIdentifier): void
+    {
+        $revision = $this->getRevision($getIdentifier);
+        if (!$revision) {
+            return;
+        }
+        $this->revisionRepository->remove($revision);
+    }
+
     /**
      * Create revisions for all registered document nodes with changes
      */
@@ -201,7 +210,7 @@ class RevisionService
     /**
      * Removes all stored revisions for all nodes
      */
-    public function flush()
+    public function flush(): void
     {
         $this->revisionRepository->removeAll();
     }

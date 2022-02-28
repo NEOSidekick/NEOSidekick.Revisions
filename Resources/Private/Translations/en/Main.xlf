@@ -29,10 +29,13 @@
                 <source>Apply</source>
             </trans-unit>
 
-            <trans-unit id="success.revisionsApplied">
+            <trans-unit id="success.revisionApplied">
                 <source>Revision applied</source>
             </trans-unit>
-            <trans-unit id="success.revisionsUpdated">
+            <trans-unit id="success.revisionDeleted">
+                <source>Revision deleted</source>
+            </trans-unit>
+            <trans-unit id="success.revisionUpdated">
                 <source>Revision updated</source>
             </trans-unit>
 
@@ -44,6 +47,9 @@
             </trans-unit>
             <trans-unit id="error.failedUpdatingRevision">
                 <source>An error occurred while updating revision.</source>
+            </trans-unit>
+            <trans-unit id="error.failedDeletingRevision">
+                <source>An error occurred while deleting a revision.</source>
             </trans-unit>
         </body>
     </file>
