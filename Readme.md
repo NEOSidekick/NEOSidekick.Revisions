@@ -44,6 +44,17 @@ We use semantic-versioning so every breaking change will increase the major-vers
 ./flow revision:flush
 ```
 
+## Configuration
+
+The following settings can be adjusted via a `Settings.yaml` file in your project:
+
+```yaml
+CodeQ:
+  Revisions:
+    compression:
+      enabled: true # Enables compression of revision xml content in the database
+```
+
 ## License
 
 Commercially licensed. Please contact office@codeq.at if you already want to use it, 

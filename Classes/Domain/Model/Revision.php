@@ -52,6 +52,12 @@ class Revision
     protected $label;
 
     /**
+     * @Flow\InjectConfiguration
+     * @var array
+     */
+    protected $settings;
+
+    /**
      * @Flow\Inject
      * @var PersistenceManagerInterface
      */
@@ -62,7 +68,7 @@ class Revision
         $this->creationDateTime = new Now();
         $this->creator = $creator;
         $this->nodeIdentifier = $nodeIdentifier;
-        $this->content = bzcompress($content, 9);
+        $this->content = $this->settings['compression']['enabled'] ? bzcompress($content, 9) : $content;
         $this->label = $label;
     }
 
@@ -83,8 +89,7 @@ class Revision
 
     public function getContent(): ?\XMLReader
     {
-        // TODO: Make compression configurable
-        $content = bzdecompress(stream_get_contents($this->content));
+        $content = $this->settings['compression']['enabled'] ? bzdecompress(stream_get_contents($this->content)) : $this->content;
 
         $xmlReader = new \XMLReader();
         $result = $xmlReader::xml($content, null, LIBXML_PARSEHUGE);
