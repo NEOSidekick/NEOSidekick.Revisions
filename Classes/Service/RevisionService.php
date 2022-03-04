@@ -77,16 +77,24 @@ class RevisionService
      */
     protected $contextFactory;
 
+    /**
+     * @Flow\InjectConfiguration(package="CodeQ.Revisions")
+     * @var array
+     */
+    protected $settings;
+
     public function createRevision(NodeInterface $node): ?Revision
     {
         $xmlWriter = $this->nodeExportService->export($node->getPath());
-
         $creator = $this->securityContext->canBeInitialized() ? $this->securityContext->getAccount() : null;
+        $enableCompression = $this->settings['compression']['enabled'] ?? true;
 
         $revision = new Revision(
             $node->getIdentifier(),
             $creator ? $creator->getAccountIdentifier() : 'CLI',
-            $xmlWriter->flush()
+            $xmlWriter->flush(),
+            null,
+            $enableCompression
         );
 
         try {
