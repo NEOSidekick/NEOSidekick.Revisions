@@ -127,7 +127,7 @@ class RevisionCommandController extends CommandController
 
         if (!$this->output->askConfirmation(
             sprintf(
-                'Do you really want to apply revision "%s" to node "%s" with identifier "%s"?',
+                'Do you really want to apply revision "%s" to node "%s" with identifier "%s"? [y/N]',
                 $revisionIdentifier,
                 $node->getLabel(),
                 $node->getIdentifier()

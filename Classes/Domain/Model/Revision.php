@@ -83,7 +83,8 @@ class Revision
 
     public function getContent(): ?\XMLReader
     {
-        $content = strpos($this->content, 'BZ') === 0 ? bzdecompress(stream_get_contents($this->content)) : $this->content;
+        $content = stream_get_contents($this->content);
+        $content = strpos($content, 'BZ') === 0 ? bzdecompress($content) : $content;
 
         $xmlReader = new \XMLReader();
         $result = $xmlReader::xml($content, null, LIBXML_PARSEHUGE);
