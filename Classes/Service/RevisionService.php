@@ -3,10 +3,11 @@ declare(strict_types=1);
 
 namespace CodeQ\Revisions\Service;
 
+use Neos\ContentRepository\Domain\Model\NodeData;
 use Neos\ContentRepository\Domain\Model\NodeInterface;
 use Neos\ContentRepository\Domain\Model\Workspace;
+use Neos\ContentRepository\Domain\Repository\NodeDataRepository;
 use Neos\ContentRepository\Domain\Service\ContextFactoryInterface;
-use Neos\ContentRepository\Domain\Service\ImportExport\NodeImportService;
 use Neos\ContentRepository\Exception\ImportException;
 use Neos\Eel\FlowQuery\FlowQuery;
 use Neos\Flow\Annotations as Flow;
@@ -83,6 +84,12 @@ class RevisionService
      */
     protected $settings;
 
+    /**
+     * @Flow\Inject
+     * @var NodeService
+     */
+    protected $nodeService;
+
     public function createRevision(NodeInterface $node): ?Revision
     {
         $xmlWriter = $this->nodeExportService->export($node->getPath());
@@ -149,9 +156,20 @@ class RevisionService
             return false;
         }
 
+        $revisionContent = $revision->getContent();
+        if (!$revisionContent) {
+            $this->logger->warning(sprintf('Could not find revision content for revision %s', $identifier));
+            return false;
+        }
+
         $success = false;
+
         try {
-            $this->nodeImportService->import($revision->getContent(), $nodePath);
+            $this->nodeImportService->import($revisionContent, $nodePath);
+
+            $importedNodeIdentifiers = $this->nodeImportService->getPersistedNodeIdentifiers();
+            $this->handleUnkownNodesInTargetPath($importedNodeIdentifiers, $node->getPath(), $liveWorkspace);
+
             $this->logger->info(sprintf('Applied revision %s on node %s', $revision->getIdentifier(), $node->getIdentifier()));
             $success = true;
         } catch (ImportException $e) {
@@ -221,6 +239,18 @@ class RevisionService
     public function flush(): void
     {
         $this->revisionRepository->removeAll();
+    }
+
+    protected function handleUnkownNodesInTargetPath(array $importedNodeIdentifiers, string $startingPointNodePath, Workspace $workspace): void
+    {
+        $nodes = $this->nodeService->findContentNodes($startingPointNodePath, $workspace);
+
+        // Filter nodes that are on the path of the imported nodes but didn't exist in the applied revision
+        $unknownNodes = array_filter($nodes, static function (NodeData $node) use ($importedNodeIdentifiers) {
+            return !in_array($node->getIdentifier(), $importedNodeIdentifiers, true);
+        });
+
+        $this->nodeService->removeNodes($unknownNodes);
     }
 
 }

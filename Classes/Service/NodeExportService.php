@@ -14,6 +14,7 @@ namespace CodeQ\Revisions\Service;
  */
 
 use Neos\ContentRepository\Domain\Model\NodeData;
+use Neos\ContentRepository\Domain\Model\Workspace;
 use Neos\ContentRepository\Domain\Repository\WorkspaceRepository;
 use Neos\ContentRepository\Domain\Service\ImportExport\ImportExportPropertyMappingConfiguration;
 use Neos\Flow\Annotations as Flow;
@@ -33,6 +34,12 @@ class NodeExportService extends \Neos\ContentRepository\Domain\Service\ImportExp
      * @var WorkspaceRepository
      */
     protected $workspaceRepository;
+
+    /**
+     * @Flow\Inject
+     * @var NodeService
+     */
+    protected $nodeService;
 
     public function export($startingPointNodePath = '/', $workspaceName = 'live', \XMLWriter $xmlWriter = null, $tidy = false, $endDocument = true, $resourceSavePath = null, $nodeTypeFilter = null): \XMLWriter
     {
@@ -90,8 +97,10 @@ class NodeExportService extends \Neos\ContentRepository\Domain\Service\ImportExp
         $startingPointNodeData = $queryBuilder->getQuery()->getResult()[0];
 
         $this->securityContext->withoutAuthorizationChecks(function () use ($startingPointNodePath, $startingPointNodeData, $workspace, $workspaceName, $nodeTypeFilter) {
+            $nodes = $this->nodeService->findContentNodes($startingPointNodePath, $workspace, false);
+
             $combinedNodeDataList = array_reduce(
-                $this->nodeDataRepository->findByParentAndNodeType($startingPointNodePath, 'Neos.Neos:Content,Neos.Neos:ContentCollection', $workspace, null, false, true),
+                $nodes,
                 function ($nodeDataList, NodeData $nodeData) use ($workspaceName, $nodeTypeFilter) {
                     return array_merge($nodeDataList, $this->findNodeDataListToExport($nodeData->getPath(), $workspaceName, $nodeTypeFilter));
                 },
