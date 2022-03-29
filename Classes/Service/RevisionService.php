@@ -6,7 +6,6 @@ namespace CodeQ\Revisions\Service;
 use Neos\ContentRepository\Domain\Model\NodeData;
 use Neos\ContentRepository\Domain\Model\NodeInterface;
 use Neos\ContentRepository\Domain\Model\Workspace;
-use Neos\ContentRepository\Domain\Repository\NodeDataRepository;
 use Neos\ContentRepository\Domain\Service\ContextFactoryInterface;
 use Neos\ContentRepository\Exception\ImportException;
 use Neos\Eel\FlowQuery\FlowQuery;
@@ -179,6 +178,69 @@ class RevisionService
         }
 
         return $success;
+    }
+
+    /**
+     * @return string[]
+     */
+    public function checkRevisionForConflicts(Revision $revision): array
+    {
+        $context = $this->contextFactory->create();
+        $node = $context->getNodeByIdentifier($revision->getNodeIdentifier());
+
+        if (!$node) {
+            return [sprintf('Could not find node with identifier "%s" to apply revision to', $revision->getNodeIdentifier())];
+        }
+
+        $revisionContent = $revision->getContent();
+        if (!$revisionContent) {
+            return [sprintf('Could not find revision content for revision %s', $revision->getIdentifier())];
+        }
+
+        $revisionRootPath = $node->getPath();
+        $nodeIdentifiersForImport = $this->getNodeIdentifiersFromRevision($revisionContent);
+        $conflicts = [];
+
+        foreach ($nodeIdentifiersForImport as $nodeIdentifier) {
+            $existingNode = $context->getNodeByIdentifier($nodeIdentifier);
+            if (!$existingNode) {
+                continue;
+            }
+
+            $existingNodePath = $existingNode->getPath();
+
+            // TODO: Also check if a node was moved to a subpage of the revision root path
+            if (strpos($existingNodePath, $revisionRootPath) === false) {
+                $closestDocumentNode = $this->getClosestDocumentNode($existingNode);
+                if ($closestDocumentNode) {
+                    $conflicts[] = sprintf('The content "%s" was moved to page "%s" and would be moved back to this page when the revision is applied!', $existingNode->getLabel(), $closestDocumentNode->getLabel());
+                } else {
+                    $conflicts[] = sprintf('The content "%s" was moved to an unknown page and would be moved back to this page when the revision is applied!', $existingNode->getLabel());
+                }
+            }
+        }
+
+        return $conflicts;
+    }
+
+    protected function getClosestDocumentNode(NodeInterface $node): ?NodeInterface
+    {
+        $parentNode = $node;
+        while ($parentNode && !$parentNode->getNodeType()->isOfType('Neos.Neos:Document')) {
+            $parentNode = $parentNode->getParent();
+        }
+        return $parentNode;
+    }
+
+    protected function getNodeIdentifiersFromRevision(\XMLReader $xmlReader): array
+    {
+        $nodeIdentifiers = [];
+        while ($xmlReader->read()) {
+            if (!$xmlReader->isEmptyElement && $xmlReader->nodeType === \XMLReader::ELEMENT && $xmlReader->name === 'node') {
+                $nodeIdentifiers[] = $xmlReader->getAttribute('identifier');
+            }
+        }
+        return $nodeIdentifiers;
     }
 
     protected function flushNodeAndChildren(NodeInterface $node, Workspace $workspace): void

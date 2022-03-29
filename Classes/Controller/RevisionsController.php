@@ -57,7 +57,7 @@ class RevisionsController extends ActionController
         ]);
     }
 
-    public function applyAction(NodeInterface $node = null, Revision $revision = null): void
+    public function applyAction(NodeInterface $node = null, Revision $revision = null, bool $force = false): void
     {
         if (!$node) {
             $this->throwStatus(404, 'Node not found');
@@ -65,6 +65,14 @@ class RevisionsController extends ActionController
 
         if (!$revision) {
             $this->throwStatus(404, 'Revision not found');
+        }
+
+        if (!$force) {
+            $conflicts = $this->revisionService->checkRevisionForConflicts($revision);
+
+            if ($conflicts) {
+                $this->throwStatus(409, json_encode($conflicts, JSON_PRETTY_PRINT));
+            }
         }
 
         $this->revisionService->applyRevision($revision->getIdentifier(), $node->getParentPath());
