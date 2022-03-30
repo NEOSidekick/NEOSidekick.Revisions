@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { IconButton } from '@neos-project/react-ui-components';
+import { IconButton, Icon } from '@neos-project/react-ui-components';
 
 import Node from '../Interfaces/Node';
 import Revision from '../Interfaces/Revision';
@@ -19,6 +19,7 @@ const RevisionList: React.FC<Props> = ({ documentNode, addFlashMessage, reloadDo
     const [revisions, setRevisions] = useState<Revision[]>([]);
     const [message, setMessage] = useState('');
     const [selectedRevision, setSelectedRevision] = useState<Revision>(null);
+    const [isLoading, setIsLoading] = useState(false);
 
     const translate = useCallback(
         (
@@ -34,7 +35,8 @@ const RevisionList: React.FC<Props> = ({ documentNode, addFlashMessage, reloadDo
     );
 
     const fetchRevisions = useCallback(() => {
-        fetchFromBackend({ action: 'get', params: { node: documentNode } })
+        setIsLoading(true);
+        fetchFromBackend({ action: 'get', params: { node: documentNode } }, setIsLoading)
             .then(({ revisions }: { revisions: Revision[] }) => setRevisions(revisions))
             .catch((error) => {
                 setMessage(translate('error.failedFetchingExpressions'));
@@ -42,9 +44,37 @@ const RevisionList: React.FC<Props> = ({ documentNode, addFlashMessage, reloadDo
             });
     }, [documentNode]);
 
-    const applyRevision = useCallback((revision: Revision) => {
-        if (confirm(`Do you want to apply revision ${formatRevisionDate(revision)} by ${revision.creator}?`)) {
-            fetchFromBackend({ action: 'apply', params: { node: documentNode, revision } })
+    const resolveConflicts = useCallback((revision: Revision, conflicts: string[]) => {
+        if (
+            confirm(
+                translate(
+                    'error.verifyResolveConflicts',
+                    'Some conflicts were detected. Do you still want to apply the revision?{conflicts}',
+                    { conflicts: '\n\n' + conflicts.join('\n\n') }
+                )
+            )
+        ) {
+            applyRevision(revision, true);
+        }
+    }, []);
+
+    const applyRevision = useCallback((revision: Revision, force = false) => {
+        if (
+            force ||
+            confirm(
+                translate('confirm.applyRevision', 'Do you want to apply revision {revisionDate} by {creator}?', {
+                    revisionDate: formatRevisionDate(revision),
+                    creator: revision.creator,
+                })
+            )
+        ) {
+            fetchFromBackend(
+                {
+                    action: 'apply',
+                    params: { node: documentNode, revision, force },
+                },
+                setIsLoading
+            )
                 .then(() => {
                     addFlashMessage(
                         translate('success.revisionApplied'),
@@ -57,15 +87,31 @@ const RevisionList: React.FC<Props> = ({ documentNode, addFlashMessage, reloadDo
                     setMessage('');
                 })
                 .catch((error) => {
-                    setMessage(translate('error.failedApplyingRevision'));
-                    console.error(error.message);
+                    const { message, status, conflicts } = error;
+                    if (status === 409) {
+                        resolveConflicts(revision, conflicts);
+                    } else {
+                        setMessage(translate('error.failedApplyingRevision'));
+                        console.error(message);
+                    }
                 });
         }
     }, []);
 
     const deleteRevision = useCallback((revision: Revision) => {
-        if (confirm(`Do you really want to delete revision ${formatRevisionDate(revision)} by ${revision.creator}?`)) {
-            fetchFromBackend({ action: 'delete', params: { revision } })
+        if (
+            confirm(
+                translate(
+                    'confirm.deleteRevision',
+                    'Do you really want to delete revision {revisionDate} by {creator}?',
+                    {
+                        revisionDate: formatRevisionDate(revision),
+                        creator: revision.creator,
+                    }
+                )
+            )
+        ) {
+            fetchFromBackend({ action: 'delete', params: { revision } }, setIsLoading)
                 .then(() => {
                     addFlashMessage(
                         translate('success.revisionDeleted'),
@@ -86,7 +132,7 @@ const RevisionList: React.FC<Props> = ({ documentNode, addFlashMessage, reloadDo
 
     const updateSelectedRevision = useCallback(
         (label) => {
-            fetchFromBackend({ action: 'setlabel', params: { revision: selectedRevision, label } })
+            fetchFromBackend({ action: 'setlabel', params: { revision: selectedRevision, label } }, setIsLoading)
                 .then(() => {
                     addFlashMessage(
                         translate('success.revisionUpdated'),
@@ -112,6 +158,11 @@ const RevisionList: React.FC<Props> = ({ documentNode, addFlashMessage, reloadDo
             {message && (
                 <div style={{ color: 'red', margin: '1rem 0' }} role="alert">
                     {message}
+                </div>
+            )}
+            {isLoading && (
+                <div>
+                    <Icon icon="spinner" spin color="primaryBlue" /> Loading …
                 </div>
             )}
             {selectedRevision ? (

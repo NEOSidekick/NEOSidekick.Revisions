@@ -16,6 +16,7 @@ type ApplyRevisionProps = {
     params: {
         node: Node;
         revision: Revision;
+        force?: boolean;
     };
 };
 
@@ -36,7 +37,32 @@ type SetLabelProps = {
 
 type FetchProps = GetRevisionsProps | ApplyRevisionProps | DeleteRevisionProps | SetLabelProps;
 
-export default function fetchFromBackend(props: FetchProps): Promise<{ revisions: Revision[] }> {
+class ApplyError extends Error {
+    private readonly _status: number;
+    private readonly _conflicts: string[];
+
+    constructor(message: string, status: number, conflicts?: string[]) {
+        super(message);
+        this.name = 'ApplyError';
+        this._status = status;
+        this._conflicts = conflicts;
+    }
+
+    get status(): number {
+        return this._status;
+    }
+
+    get conflicts(): string[] {
+        return this._conflicts;
+    }
+}
+
+export default function fetchFromBackend(
+    props: FetchProps,
+    setLoadingState: (state) => void
+): Promise<{ revisions: Revision[] }> {
+    setLoadingState(true);
+
     // Cannot use URL object here due to missing Safari support
     let url = `/neos/codeq/revisions/${props.action}?`;
 
@@ -49,6 +75,9 @@ export default function fetchFromBackend(props: FetchProps): Promise<{ revisions
     if (props.params['label']) {
         url += `&label=${encodeURIComponent(props.params['label'])}`;
     }
+    if (props.params['force']) {
+        url += `&force=${encodeURIComponent(props.params['force'])}`;
+    }
 
     return fetchWithErrorHandling
         .withCsrfToken((csrfToken) => ({
@@ -60,12 +89,23 @@ export default function fetchFromBackend(props: FetchProps): Promise<{ revisions
                 'Content-Type': 'application/json',
             },
         }))
-        .then((response) => {
+        .then(async (response) => {
+            setLoadingState(false);
             if (!response) {
                 return;
             }
-            if (response.status === 404) {
-                throw new Error(response.message);
+            if (response.status >= 400 && response.status < 600) {
+                const { message } = response;
+                if (props.action === 'apply') {
+                    let conflicts: string[] = [];
+                    try {
+                        conflicts = await response.json();
+                    } catch (e) {
+                        // noop
+                    }
+                    throw new ApplyError(message, response.status, conflicts);
+                }
+                throw new Error(message);
             }
             return response.json();
         });
