@@ -207,16 +207,11 @@ class RevisionService
                 continue;
             }
 
-            $existingNodePath = $existingNode->getPath();
-
-            // TODO: Also check if a node was moved to a subpage of the revision root path
-            if (strpos($existingNodePath, $revisionRootPath) === false) {
-                $closestDocumentNode = $this->getClosestDocumentNode($existingNode);
-                if ($closestDocumentNode) {
-                    $conflicts[] = sprintf('The content "%s" was moved to page "%s" and would be moved back to this page when the revision is applied!', $existingNode->getLabel(), $closestDocumentNode->getLabel());
-                } else {
-                    $conflicts[] = sprintf('The content "%s" was moved to an unknown page and would be moved back to this page when the revision is applied!', $existingNode->getLabel());
-                }
+            $closestDocumentNode = $this->getClosestDocumentNode($existingNode);
+            if (!$closestDocumentNode) {
+                $conflicts[] = sprintf('The content "%s" was moved to an unknown page and would be moved back to this page when the revision is applied!', $existingNode->getLabel());
+            } else if ($closestDocumentNode->getPath() !== $revisionRootPath) {
+                $conflicts[] = sprintf('The content "%s" was moved to page "%s" and would be moved back to this page when the revision is applied!', $existingNode->getLabel(), $closestDocumentNode->getLabel());
             }
         }
 

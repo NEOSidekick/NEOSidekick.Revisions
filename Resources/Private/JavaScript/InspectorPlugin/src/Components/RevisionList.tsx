@@ -161,9 +161,9 @@ const RevisionList: React.FC<Props> = ({ documentNode, addFlashMessage, reloadDo
                 </div>
             )}
             {isLoading && (
-                <span>
+                <div>
                     <Icon icon="spinner" spin color="primaryBlue" /> Loading …
-                </span>
+                </div>
             )}
             {selectedRevision ? (
                 <RevisionDetails
