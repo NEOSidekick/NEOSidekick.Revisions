@@ -51,6 +51,22 @@
             <trans-unit id="error.failedDeletingRevision">
                 <source>An error occurred while deleting a revision.</source>
             </trans-unit>
+            <trans-unit id="error.verifyResolveConflicts">
+                <source>Some conflicts were detected. Do you still want to apply the revision?{conflicts}</source>
+            </trans-unit>
+            <trans-unit id="error.revisionNotFound">
+                <source>Revision not found</source>
+            </trans-unit>
+            <trans-unit id="error.revisionHasConflicts">
+                <source>Revision has conflicts</source>
+            </trans-unit>
+            <trans-unit id="error.nodeNotFound">
+                <source>Page not found</source>
+            </trans-unit>
+
+            <trans-unit id="confirm.applyRevision">
+                <source>Do you want to apply revision {revisionDate} by {creator}?</source>
+            </trans-unit>
         </body>
     </file>
 </xliff>

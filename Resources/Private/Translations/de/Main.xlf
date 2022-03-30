@@ -66,6 +66,27 @@
                 <source>An error occurred while deleting a revision.</source>
                 <target>Beim Löschen einer Revision ist ein Fehler aufgetreten.</target>
             </trans-unit>
+            <trans-unit id="error.verifyResolveConflicts">
+                <source>Some conflicts were detected. Do you still want to apply the revision?{conflicts}</source>
+                <target>Es wurden einige Konflikte festgestellt. Möchten Sie die Revision trotzdem anwenden?{conflicts}</target>
+            </trans-unit>
+            <trans-unit id="error.revisionNotFound">
+                <source>Revision not found</source>
+                <target>Revision nicht gefunden</target>
+            </trans-unit>
+            <trans-unit id="error.revisionHasConflicts">
+                <source>Revision has conflicts</source>
+                <target>Revision hat Konflikte</target>
+            </trans-unit>
+            <trans-unit id="error.nodeNotFound">
+                <source>Page not found</source>
+                <target>Seite nicht gefunden</target>
+            </trans-unit>
+
+            <trans-unit id="confirm.applyRevision">
+                <source>Do you want to apply revision {revisionDate} by {creator}?</source>
+                <target>Möchten Sie Revision {revisionDate} von {creator} anwenden?</target>
+            </trans-unit>
         </body>
     </file>
 </xliff>
