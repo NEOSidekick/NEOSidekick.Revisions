@@ -44,6 +44,22 @@ We use semantic-versioning so every breaking change will increase the major-vers
 ./flow revision:flush
 ```
 
+### Flush revisions older than a certain date
+
+The date format is `YYYY-MM-DD`.
+
+```console
+./flow revision:flush --since=2022-04-01
+```
+
+### Flush revisions without confirmation
+
+This can be used to flush via a cron job.
+
+```console
+./flow revision:flush --force
+```
+
 ## Configuration
 
 The following settings can be adjusted via a `Settings.yaml` file in your project:

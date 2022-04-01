@@ -149,13 +149,14 @@ class RevisionCommandController extends CommandController
         }
     }
 
-    public function flushCommand(): void
+    public function flushCommand(string $since = null, bool $force = false): void
     {
-        if (!$this->output->askConfirmation('Do you really want to flush all revisions? [y/N]', false)) {
+        if (!$force && !$this->output->askConfirmation('Do you really want to flush all revisions? [y/N]', false)) {
             $this->outputLine('Aborted');
             $this->quit(1);
         }
-        $this->revisionService->flush();
-        $this->outputLine('Revisions flushed');
+        $sinceDateTime = $since ? new \DateTime($since) : null;
+        $count = $this->revisionService->flush($sinceDateTime);
+        $this->outputLine(sprintf('%d revisions flushed', $count));
     }
 }

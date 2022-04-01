@@ -293,9 +293,14 @@ class RevisionService
     /**
      * Removes all stored revisions for all nodes
      */
-    public function flush(): void
+    public function flush(\DateTime $since = null): int
     {
-        $this->revisionRepository->removeAll();
+        if (!$since) {
+            $count = $this->revisionRepository->countAll();
+            $this->revisionRepository->removeAll();
+            return $count;
+        }
+        return $this->revisionRepository->removeAllOlderThan($since);
     }
 
     protected function handleUnkownNodesInTargetPath(array $importedNodeIdentifiers, string $startingPointNodePath, Workspace $workspace): void

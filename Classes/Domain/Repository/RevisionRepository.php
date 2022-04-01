@@ -34,4 +34,16 @@ class RevisionRepository extends Repository
         'creationDateTime' => 'DESC'
     ];
 
+    public function removeAllOlderThan(\DateTime $since): int
+    {
+        $query = $this->createQuery();
+        $oldRevisions = $query->matching($query->lessThan('creationDateTime', $since))->execute();
+
+        foreach ($oldRevisions as $oldRevision) {
+            $this->remove($oldRevision);
+        }
+
+        return count($oldRevisions);
+    }
+
 }
