@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useState } from 'react';
 import { Button, TextInput } from '@neos-project/react-ui-components';
 
 import { formatRevisionDate } from '../Helpers/format';
@@ -10,9 +10,10 @@ interface Props {
     onUpdate: (label: string) => void;
     onClose: () => void;
     translate: I18nRegistry['translate'];
+    isLoading: boolean;
 }
 
-const RevisionDetails: React.FC<Props> = ({ revision, onUpdate, onClose, translate }) => {
+const RevisionDetails: React.FC<Props> = ({ revision, onUpdate, onClose, translate, isLoading }) => {
     const [label, setLabel] = useState(revision.label || '');
 
     return (
@@ -48,10 +49,10 @@ const RevisionDetails: React.FC<Props> = ({ revision, onUpdate, onClose, transla
                 </tbody>
             </table>
             <div style={{ marginTop: '1rem' }}>
-                <Button style="warn" onClick={onClose}>
+                <Button style="warn" onClick={onClose} disabled={isLoading}>
                     {translate('action.close')}
                 </Button>
-                <Button style="success" onClick={() => onUpdate(label)} disabled={label == revision.label}>
+                <Button style="success" onClick={() => onUpdate(label)} disabled={label == revision.label || isLoading}>
                     {translate('action.apply')}
                 </Button>
             </div>

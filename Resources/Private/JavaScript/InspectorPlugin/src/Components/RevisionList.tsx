@@ -175,6 +175,7 @@ const RevisionList: React.FC<Props> = ({ documentNode, addFlashMessage, reloadDo
                     onUpdate={updateSelectedRevision}
                     onClose={() => setSelectedRevision(null)}
                     translate={translate}
+                    isLoading={isLoading}
                 />
             ) : revisions.length ? (
                 <table style={{ width: '100%' }}>
