@@ -22,6 +22,13 @@
                 <source>No revisions found</source>
             </trans-unit>
 
+            <trans-unit id="revision.label">
+                <source>By {creator}</source>
+            </trans-unit>
+            <trans-unit id="tooltip.revisionLabel">
+                <source>Created on {revisionDate} by {creator}</source>
+            </trans-unit>
+
             <trans-unit id="action.close">
                 <source>Close</source>
             </trans-unit>
@@ -29,14 +36,33 @@
                 <source>Apply</source>
             </trans-unit>
 
+            <trans-unit id="action.apply.title">
+                <source>Apply revision {revisionDate} by {creator}</source>
+            </trans-unit>
+            <trans-unit id="action.edit.title">
+                <source>Edit revision {revisionDate} by {creator}</source>
+            </trans-unit>
+            <trans-unit id="action.delete.title">
+                <source>Delete revision {revisionDate} by {creator}</source>
+            </trans-unit>
+
             <trans-unit id="success.revisionApplied">
                 <source>Revision applied</source>
+            </trans-unit>
+            <trans-unit id="success.revisionApplied.message">
+                <source>Revision "{label}" by "{creator}" applied.</source>
             </trans-unit>
             <trans-unit id="success.revisionDeleted">
                 <source>Revision deleted</source>
             </trans-unit>
+            <trans-unit id="success.revisionDeleted.message">
+                <source>Revision "{label}" by "{creator} deleted.</source>
+            </trans-unit>
             <trans-unit id="success.revisionUpdated">
                 <source>Revision updated</source>
+            </trans-unit>
+            <trans-unit id="success.revisionUpdated.message">
+                <source>Revision {label} by "{creator}" updated.</source>
             </trans-unit>
 
             <trans-unit id="error.failedFetchingExpressions">

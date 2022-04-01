@@ -78,9 +78,10 @@ const RevisionList: React.FC<Props> = ({ documentNode, addFlashMessage, reloadDo
                 .then(() => {
                     addFlashMessage(
                         translate('success.revisionApplied'),
-                        `Revision "${revision.label || formatRevisionDate(revision)}" by "${
-                            revision.creator
-                        }" applied.`,
+                        translate('success.revisionApplied.message', 'Revision "{label}" by "{creator}" applied.', {
+                            label: revision.label || formatRevisionDate(revision),
+                            creator: revision.creator,
+                        }),
                         'success'
                     );
                     reloadDocument();
@@ -115,9 +116,10 @@ const RevisionList: React.FC<Props> = ({ documentNode, addFlashMessage, reloadDo
                 .then(() => {
                     addFlashMessage(
                         translate('success.revisionDeleted'),
-                        `Revision "${revision.label || formatRevisionDate(revision)}" by "${
-                            revision.creator
-                        }" deleted.`,
+                        translate('success.revisionDeleted.message', 'Revision "{label}" by "{creator} deleted.', {
+                            label: revision.label || formatRevisionDate(revision),
+                            creator: revision.creator,
+                        }),
                         'success'
                     );
                     setMessage('');
@@ -136,11 +138,13 @@ const RevisionList: React.FC<Props> = ({ documentNode, addFlashMessage, reloadDo
                 .then(() => {
                     addFlashMessage(
                         translate('success.revisionUpdated'),
-                        `Revision ${selectedRevision.label || formatRevisionDate(selectedRevision)} by "${
-                            selectedRevision.creator
-                        }" updated.`,
+                        translate('success.revisionUpdated.message', 'Revision {label} by "{creator}" updated.', {
+                            label: selectedRevision.label || formatRevisionDate(selectedRevision),
+                            creator: selectedRevision.creator,
+                        }),
                         'success'
                     );
+                    setSelectedRevision(null);
                     fetchRevisions();
                 })
                 .catch((error) => {
@@ -181,38 +185,81 @@ const RevisionList: React.FC<Props> = ({ documentNode, addFlashMessage, reloadDo
                         </tr>
                     </thead>
                     <tbody>
-                        {revisions.map((revision) => (
-                            <tr key={revision.creationDateTime}>
-                                <td title={`Created on ${formatRevisionDate(revision)} by ${revision.creator}`}>
-                                    {revision.label || formatRevisionDate(revision)}
-                                </td>
-                                <td style={{ textAlign: 'center' }}>
-                                    <IconButton
-                                        onClick={() => applyRevision(revision)}
-                                        icon="trash-restore"
-                                        style="primary"
-                                        hoverStyle="success"
-                                        size="small"
-                                        title={`Apply revision ${formatRevisionDate(revision)} by ${revision.creator}`}
-                                    />
-                                    <IconButton
-                                        onClick={() => setSelectedRevision(revision)}
-                                        icon="comment"
-                                        style="primary"
-                                        hoverStyle="warn"
-                                        size="small"
-                                        title={`Edit revision ${formatRevisionDate(revision)} by ${revision.creator}`}
-                                    />
-                                    <IconButton
-                                        onClick={() => deleteRevision(revision)}
-                                        icon="times-circle"
-                                        style="primary"
-                                        hoverStyle="error"
-                                        size="small"
-                                        title={`Delete revision ${formatRevisionDate(revision)} by ${revision.creator}`}
-                                    />
-                                </td>
-                            </tr>
+                        {revisions.map((revision, index) => (
+                            <>
+                                <tr key={revision.creationDateTime}>
+                                    <td
+                                        title={translate(
+                                            'tooltip.revisionLabel',
+                                            'Created on {revisionDate} by {creator}',
+                                            {
+                                                revisionDate: formatRevisionDate(revision),
+                                                creator: revision.creator,
+                                            }
+                                        )}
+                                    >
+                                        <div>
+                                            {revision.label ||
+                                                translate('revision.label', 'By {creator}', {
+                                                    creator: revision.creator,
+                                                })}
+                                        </div>
+                                        <time style={{ opacity: 0.5 }}>{formatRevisionDate(revision)}</time>
+                                    </td>
+                                    <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
+                                        <IconButton
+                                            onClick={() => applyRevision(revision)}
+                                            icon="trash-restore"
+                                            style="primary"
+                                            hoverStyle="success"
+                                            size="small"
+                                            title={translate(
+                                                'action.apply.title',
+                                                'Apply revision {revisionDate} by {creator}',
+                                                {
+                                                    revisionDate: formatRevisionDate(revision),
+                                                    creator: revision.creator,
+                                                }
+                                            )}
+                                        />
+                                        <IconButton
+                                            onClick={() => setSelectedRevision(revision)}
+                                            icon="comment"
+                                            style="primary"
+                                            hoverStyle="warn"
+                                            size="small"
+                                            title={translate(
+                                                'action.edit.title',
+                                                'Edit revision {revisionDate} by {creator}',
+                                                {
+                                                    revisionDate: formatRevisionDate(revision),
+                                                    creator: revision.creator,
+                                                }
+                                            )}
+                                        />
+                                        <IconButton
+                                            onClick={() => deleteRevision(revision)}
+                                            icon="times-circle"
+                                            style="primary"
+                                            hoverStyle="error"
+                                            size="small"
+                                            title={translate(
+                                                'action.delete.title',
+                                                'Delete revision {revisionDate} by {creator}',
+                                                {
+                                                    revisionDate: formatRevisionDate(revision),
+                                                    creator: revision.creator,
+                                                }
+                                            )}
+                                        />
+                                    </td>
+                                </tr>
+                                {index < revisions.length - 1 && (
+                                    <tr>
+                                        <td colSpan={2} style={{ borderBottom: '1px solid #3f3f3f' }} />
+                                    </tr>
+                                )}
+                            </>
                         ))}
                     </tbody>
                 </table>
