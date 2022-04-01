@@ -104,6 +104,10 @@ class Revision
         $content = stream_get_contents($this->content);
         $content = strpos($content, 'BZ') === 0 ? $this->decompress($content) : $content;
 
+        if (!$content) {
+            return null;
+        }
+
         $xmlReader = new \XMLReader();
         $result = $xmlReader::xml($content, null, LIBXML_PARSEHUGE);
 
