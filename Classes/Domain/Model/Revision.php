@@ -62,8 +62,26 @@ class Revision
         $this->creationDateTime = new Now();
         $this->creator = $creator;
         $this->nodeIdentifier = $nodeIdentifier;
-        $this->content = $compress ? bzcompress($content, 9) : $content;
+        $this->content = $compress ? $this->compress($content) : $content;
         $this->label = $label;
+    }
+
+    protected function compress(string $content): string
+    {
+        try {
+            return bzcompress($content, 9);
+        } catch (\Exception $e) {
+        }
+        return $content;
+    }
+
+    protected function decompress(string $content): string
+    {
+        try {
+            return bzdecompress($content);
+        } catch (\Exception $e) {
+        }
+        return $content;
     }
 
     public function getCreationDateTime(): \DateTime
@@ -84,7 +102,7 @@ class Revision
     public function getContent(): ?\XMLReader
     {
         $content = stream_get_contents($this->content);
-        $content = strpos($content, 'BZ') === 0 ? bzdecompress($content) : $content;
+        $content = strpos($content, 'BZ') === 0 ? $this->decompress($content) : $content;
 
         $xmlReader = new \XMLReader();
         $result = $xmlReader::xml($content, null, LIBXML_PARSEHUGE);

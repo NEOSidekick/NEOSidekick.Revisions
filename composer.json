@@ -16,6 +16,9 @@
     "ext-xmlwriter": "*",
     "ext-libxml": "*"
   },
+  "suggest": {
+    "ext-bz2": "Allows compression of revision data"
+  },
   "autoload": {
     "psr-4": {
       "CodeQ\\Revisions\\": "Classes"
