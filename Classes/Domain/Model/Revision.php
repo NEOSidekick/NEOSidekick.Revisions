@@ -103,6 +103,7 @@ class Revision
     {
         $content = stream_get_contents($this->content);
         $content = strpos($content, 'BZ') === 0 ? $this->decompress($content) : $content;
+        rewind($this->content);
 
         if (!$content) {
             return null;
