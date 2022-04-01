@@ -189,7 +189,7 @@ const RevisionList: React.FC<Props> = ({ documentNode, addFlashMessage, reloadDo
                                 <td style={{ textAlign: 'center' }}>
                                     <IconButton
                                         onClick={() => applyRevision(revision)}
-                                        icon="check"
+                                        icon="trash-restore"
                                         style="primary"
                                         hoverStyle="success"
                                         size="small"
@@ -197,7 +197,7 @@ const RevisionList: React.FC<Props> = ({ documentNode, addFlashMessage, reloadDo
                                     />
                                     <IconButton
                                         onClick={() => setSelectedRevision(revision)}
-                                        icon="edit"
+                                        icon="comment"
                                         style="primary"
                                         hoverStyle="warn"
                                         size="small"
@@ -205,7 +205,7 @@ const RevisionList: React.FC<Props> = ({ documentNode, addFlashMessage, reloadDo
                                     />
                                     <IconButton
                                         onClick={() => deleteRevision(revision)}
-                                        icon="trash-alt"
+                                        icon="times-circle"
                                         style="primary"
                                         hoverStyle="error"
                                         size="small"
