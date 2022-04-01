@@ -45,6 +45,10 @@
                 <source>Apply</source>
                 <target>Anwenden</target>
             </trans-unit>
+            <trans-unit id="action.apply.newRevisionLabel">
+                <source>Applied revision {revision}</source>
+                <target>Angewandte Revision {revision}</target>
+            </trans-unit>
 
             <trans-unit id="action.apply.title">
                 <source>Apply revision {revisionDate} by {creator}</source>

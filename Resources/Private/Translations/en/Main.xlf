@@ -35,6 +35,9 @@
             <trans-unit id="action.apply">
                 <source>Apply</source>
             </trans-unit>
+            <trans-unit id="action.apply.newRevisionLabel">
+                <source>Applied revision {revision}</source>
+            </trans-unit>
 
             <trans-unit id="action.apply.title">
                 <source>Apply revision {revisionDate} by {creator}</source>

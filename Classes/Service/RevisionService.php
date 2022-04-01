@@ -12,6 +12,7 @@ use Neos\Eel\FlowQuery\FlowQuery;
 use Neos\Flow\Annotations as Flow;
 use CodeQ\Revisions\Domain\Model\Revision;
 use CodeQ\Revisions\Domain\Repository\RevisionRepository;
+use Neos\Flow\I18n\Translator;
 use Neos\Flow\Persistence\Exception\IllegalObjectTypeException;
 use Neos\Flow\Persistence\PersistenceManagerInterface;
 use Neos\Flow\Security\Context;
@@ -89,7 +90,13 @@ class RevisionService
      */
     protected $nodeService;
 
-    public function createRevision(NodeInterface $node): ?Revision
+    /**
+     * @Flow\Inject
+     * @var Translator
+     */
+    protected $translator;
+
+    public function createRevision(NodeInterface $node, string $label = null): ?Revision
     {
         $xmlWriter = $this->nodeExportService->export($node->getPath());
         $creator = $this->securityContext->canBeInitialized() ? $this->securityContext->getAccount() : null;
@@ -99,7 +106,7 @@ class RevisionService
             $node->getIdentifier(),
             $creator ? $creator->getAccountIdentifier() : 'CLI',
             $xmlWriter->flush(),
-            null,
+            $label,
             $enableCompression
         );
 
@@ -170,6 +177,22 @@ class RevisionService
             $this->handleUnkownNodesInTargetPath($importedNodeIdentifiers, $node->getPath(), $liveWorkspace);
 
             $this->logger->info(sprintf('Applied revision %s on node %s', $revision->getIdentifier(), $node->getIdentifier()));
+
+            if ($this->settings['revisions']['createRevisionAfterApply']) {
+                $this->createRevision(
+                    $node,
+                    $this->translator->translateById(
+                        'action.apply.newRevisionLabel',
+                        // TODO: Format with localized date or use different identifier?
+                        ['revision' => $revision->getLabel() ?? $revision->getCreationDateTime()->format('Y-m-d H:i')],
+                        null,
+                        null,
+                        'Main',
+                        'CodeQ.Revisions'
+                    )
+                );
+            }
+
             $success = true;
         } catch (ImportException $e) {
             $this->logger->error(sprintf('Failed to apply revision for node %s', $revision->getIdentifier()));

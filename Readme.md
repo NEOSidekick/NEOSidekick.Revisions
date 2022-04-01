@@ -68,7 +68,9 @@ The following settings can be adjusted via a `Settings.yaml` file in your projec
 CodeQ:
   Revisions:
     compression:
-      enabled: true # Enables compression of revision xml content in the database
+      enabled: true # Enables compression of revision xml content in the database        
+    revisions:
+      createRevisionAfterApply: true # Create a revision after applying a revision
 ```
 
 ## License
