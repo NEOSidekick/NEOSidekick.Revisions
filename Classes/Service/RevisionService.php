@@ -12,6 +12,8 @@ use Neos\Eel\FlowQuery\FlowQuery;
 use Neos\Flow\Annotations as Flow;
 use CodeQ\Revisions\Domain\Model\Revision;
 use CodeQ\Revisions\Domain\Repository\RevisionRepository;
+use Neos\Flow\I18n\Formatter\DatetimeFormatter;
+use Neos\Flow\I18n\Service as I18nService;
 use Neos\Flow\I18n\Translator;
 use Neos\Flow\Persistence\Exception\IllegalObjectTypeException;
 use Neos\Flow\Persistence\PersistenceManagerInterface;
@@ -96,7 +98,34 @@ class RevisionService
      */
     protected $translator;
 
+    /**
+     * @Flow\Inject
+     * @var DatetimeFormatter
+     */
+    protected $datetimeFormatter;
+
+    /**
+     * @Flow\Inject
+     * @var I18nService
+     */
+    protected $localizationService;
+
     public function createRevision(NodeInterface $node, string $label = null): ?Revision
+    {
+        return $this->createRevisionInternal($node, $label);
+    }
+
+    public function setLabel(?Revision $revision, $label): void
+    {
+        if (!$revision) {
+            return;
+        }
+        $revision->setLabel($label);
+        $this->logger->info(sprintf('Set label "%s" for revision %s', $label, $revision->getIdentifier()));
+        $this->revisionRepository->update($revision);
+    }
+
+    protected function createRevisionInternal(NodeInterface $node, string $label = null): ?Revision
     {
         $xmlWriter = $this->nodeExportService->export($node->getPath());
         $creator = $this->securityContext->canBeInitialized() ? $this->securityContext->getAccount() : null;
@@ -119,16 +148,6 @@ class RevisionService
         }
 
         return $revision;
-    }
-
-    public function setLabel(?Revision $revision, $label): void
-    {
-        if (!$revision) {
-            return;
-        }
-        $revision->setLabel($label);
-        $this->logger->info(sprintf('Set label "%s" for revision %s', $label, $revision->getIdentifier()));
-        $this->revisionRepository->update($revision);
     }
 
     /**
@@ -179,12 +198,15 @@ class RevisionService
             $this->logger->info(sprintf('Applied revision %s on node %s', $revision->getIdentifier(), $node->getIdentifier()));
 
             if ($this->settings['revisions']['createRevisionAfterApply']) {
-                $this->createRevision(
+                $useLocale = $this->localizationService->getConfiguration()->getCurrentLocale();
+                $revisionDate = $this->datetimeFormatter->formatDateTimeWithCustomPattern($revision->getCreationDateTime(), 'dd.MM.yyyy, HH:mm', $useLocale);
+
+                $this->createRevisionInternal(
                     $node,
                     $this->translator->translateById(
                         'action.apply.newRevisionLabel',
                         // TODO: Format with localized date or use different identifier?
-                        ['revision' => $revision->getLabel() ?? $revision->getCreationDateTime()->format('Y-m-d H:i')],
+                        ['revision' => $revision->getLabel() ?: $revisionDate],
                         null,
                         null,
                         'Main',
