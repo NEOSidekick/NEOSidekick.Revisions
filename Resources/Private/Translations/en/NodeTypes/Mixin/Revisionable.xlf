@@ -6,7 +6,7 @@
                 <source>Revisions</source>
             </trans-unit>
             <trans-unit id="views.revisions">
-                <source>Available revisions for this document</source>
+                <source> </source>
             </trans-unit>
         </body>
     </file>

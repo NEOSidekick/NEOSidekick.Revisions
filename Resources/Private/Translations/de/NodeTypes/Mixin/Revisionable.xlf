@@ -7,8 +7,8 @@
                 <target>Revisionen</target>
             </trans-unit>
             <trans-unit id="views.revisions">
-                <source>Available revisions for this document</source>
-                <target>Verfügbare Revisionen für dieses Dokument</target>
+                <source> </source>
+                <target> </target>
             </trans-unit>
         </body>
     </file>
