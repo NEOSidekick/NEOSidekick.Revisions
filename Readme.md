@@ -77,6 +77,13 @@ CodeQ:
       enabled: true # Enables compression of revision xml content in the database        
     revisions:
       createRevisionAfterApply: true # Create a revision after applying a revision
+
+Neos:
+  Neos:
+    Ui:
+      frontendConfiguration:
+        CodeQ.Revisions:
+          showDeleteButton: false # Show the delete button in the revisions list
 ```
 
 ## License

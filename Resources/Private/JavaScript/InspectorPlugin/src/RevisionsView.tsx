@@ -28,6 +28,7 @@ import I18nRegistry from './Interfaces/I18nRegistry';
 )
 @neos((globalRegistry) => ({
     i18nRegistry: globalRegistry.get('i18n'),
+    frontendConfiguration: globalRegistry.get('frontendConfiguration').get('CodeQ.Revisions'),
 }))
 export default class RevisionsView extends PureComponent<{
     documentNodePath: string;
@@ -35,6 +36,10 @@ export default class RevisionsView extends PureComponent<{
     addFlashMessage: (title: string, message: string, severity?: string, timeout?: number) => void;
     reloadDocument: () => void;
     i18nRegistry: I18nRegistry;
+    frontendConfiguration: {
+        [key: string]: any;
+        showDeleteButton: boolean;
+    };
 }> {
     static propTypes = {
         documentNodePath: PropTypes.string.isRequired,
@@ -42,6 +47,7 @@ export default class RevisionsView extends PureComponent<{
         getNodeByContextPath: PropTypes.func.isRequired,
         addFlashMessage: PropTypes.func.isRequired,
         reloadDocument: PropTypes.func.isRequired,
+        frontendConfiguration: PropTypes.object.isRequired,
     };
 
     constructor(props) {
@@ -57,6 +63,7 @@ export default class RevisionsView extends PureComponent<{
                 addFlashMessage={this.props.addFlashMessage}
                 reloadDocument={this.props.reloadDocument}
                 i18nRegistry={this.props.i18nRegistry}
+                frontendConfiguration={this.props.frontendConfiguration}
             />
         );
     }

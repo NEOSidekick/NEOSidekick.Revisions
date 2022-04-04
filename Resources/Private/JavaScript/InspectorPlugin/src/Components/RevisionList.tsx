@@ -13,9 +13,19 @@ interface Props {
     addFlashMessage: (title: string, message: string, severity?: string, timeout?: number) => void;
     reloadDocument: () => void;
     i18nRegistry: I18nRegistry;
+    frontendConfiguration: {
+        [key: string]: any;
+        showDeleteButton: boolean;
+    };
 }
 
-const RevisionList: React.FC<Props> = ({ documentNode, addFlashMessage, reloadDocument, i18nRegistry }) => {
+const RevisionList: React.FC<Props> = ({
+    documentNode,
+    addFlashMessage,
+    reloadDocument,
+    i18nRegistry,
+    frontendConfiguration,
+}) => {
     const [revisions, setRevisions] = useState<Revision[]>([]);
     const [message, setMessage] = useState('');
     const [selectedRevision, setSelectedRevision] = useState<Revision>(null);
@@ -238,21 +248,23 @@ const RevisionList: React.FC<Props> = ({ documentNode, addFlashMessage, reloadDo
                                                 }
                                             )}
                                         />
-                                        <IconButton
-                                            onClick={() => deleteRevision(revision)}
-                                            icon="times-circle"
-                                            style="primary"
-                                            hoverStyle="error"
-                                            size="small"
-                                            title={translate(
-                                                'action.delete.title',
-                                                'Delete revision {revisionDate} by {creator}',
-                                                {
-                                                    revisionDate: formatRevisionDate(revision),
-                                                    creator: revision.creator,
-                                                }
-                                            )}
-                                        />
+                                        {frontendConfiguration.showDeleteButton && (
+                                            <IconButton
+                                                onClick={() => deleteRevision(revision)}
+                                                icon="times-circle"
+                                                style="primary"
+                                                hoverStyle="error"
+                                                size="small"
+                                                title={translate(
+                                                    'action.delete.title',
+                                                    'Delete revision {revisionDate} by {creator}',
+                                                    {
+                                                        revisionDate: formatRevisionDate(revision),
+                                                        creator: revision.creator,
+                                                    }
+                                                )}
+                                            />
+                                        )}
                                     </td>
                                 </tr>
                                 {index < revisions.length - 1 && (
