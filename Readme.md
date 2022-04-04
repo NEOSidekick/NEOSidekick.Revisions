@@ -18,8 +18,14 @@ Note: The package will be commercially licensed to cover development costs.
 CodeQ.Revisions is available via packagist. `"codeq/revisions" : "~1.0"` to the require section of the `composer.json`
 or run:
 
-```bash
+```console
 composer require codeq/revisions
+```
+
+Then you should make sure that your database is up-to-date by running the following command:
+
+```console
+./flow doctrine:migrate
 ```
 
 We use semantic-versioning so every breaking change will increase the major-version number.
