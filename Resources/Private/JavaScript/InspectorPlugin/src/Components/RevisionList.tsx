@@ -29,7 +29,7 @@ const RevisionList: React.FC<Props> = ({
     const [revisions, setRevisions] = useState<Revision[]>([]);
     const [message, setMessage] = useState('');
     const [selectedRevision, setSelectedRevision] = useState<Revision>(null);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
     const translate = useCallback(
         (
@@ -276,8 +276,10 @@ const RevisionList: React.FC<Props> = ({
                         ))}
                     </tbody>
                 </table>
-            ) : (
+            ) : !isLoading ? (
                 <em>{translate('list.noRevisionsFound')}</em>
+            ) : (
+                ''
             )}
         </div>
     );
