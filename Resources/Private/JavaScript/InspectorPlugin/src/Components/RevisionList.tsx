@@ -98,12 +98,12 @@ const RevisionList: React.FC<Props> = ({
                     setMessage('');
                 })
                 .catch((error) => {
-                    const { message, status, conflicts } = error;
+                    const { status, conflicts } = error;
                     if (status === 409) {
                         resolveConflicts(revision, conflicts);
                     } else {
                         setMessage(translate('error.failedApplyingRevision'));
-                        console.error(message);
+                        console.error(error);
                     }
                 });
         }
@@ -197,7 +197,7 @@ const RevisionList: React.FC<Props> = ({
                     </thead>
                     <tbody>
                         {revisions.map((revision, index) => (
-                            <>
+                            <React.Fragment key={index}>
                                 <tr key={revision.creationDateTime}>
                                     <td
                                         title={translate(
@@ -272,7 +272,7 @@ const RevisionList: React.FC<Props> = ({
                                         <td colSpan={2} style={{ borderBottom: '1px solid #3f3f3f' }} />
                                     </tr>
                                 )}
-                            </>
+                            </React.Fragment>
                         ))}
                     </tbody>
                 </table>

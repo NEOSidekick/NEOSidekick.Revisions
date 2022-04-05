@@ -85,7 +85,7 @@ class RevisionsController extends ActionController
         $result = $this->revisionService->applyRevision($revision->getIdentifier(), $node->getParentPath());
 
         if (!$result) {
-            $this->throwStatus(404, $this->translate('error.revisionNotApplied', 'Failed to apply revision'));
+            $this->throwStatus(500, $this->translate('error.revisionNotApplied', 'Failed to apply revision'));
         }
 
         $this->view->assign('value', [

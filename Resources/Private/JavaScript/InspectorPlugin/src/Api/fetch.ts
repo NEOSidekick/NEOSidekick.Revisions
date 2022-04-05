@@ -90,7 +90,6 @@ export default function fetchFromBackend(
             },
         }))
         .then(async (response) => {
-            setLoadingState(false);
             if (!response) {
                 return;
             }
@@ -108,5 +107,8 @@ export default function fetchFromBackend(
                 throw new Error(message);
             }
             return response.json();
+        })
+        .finally(() => {
+            setLoadingState(false);
         });
 }
