@@ -120,6 +120,10 @@
                 <source>Page not found</source>
                 <target>Seite nicht gefunden</target>
             </trans-unit>
+            <trans-unit id="error.revisionNotApplied">
+                <source>Failed to apply revision</source>
+                <target>Revision konnte nicht angewandt werden</target>
+            </trans-unit>
 
             <trans-unit id="confirm.applyRevision">
                 <source>Do you want to apply revision {revisionDate} by {creator}?</source>

@@ -92,6 +92,9 @@
             <trans-unit id="error.nodeNotFound">
                 <source>Page not found</source>
             </trans-unit>
+            <trans-unit id="error.revisionNotApplied">
+                <source>Failed to apply revision</source>
+            </trans-unit>
 
             <trans-unit id="confirm.applyRevision">
                 <source>Do you want to apply revision {revisionDate} by {creator}?</source>
