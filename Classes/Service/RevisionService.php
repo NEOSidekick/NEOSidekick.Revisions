@@ -193,7 +193,7 @@ class RevisionService
             $this->nodeImportService->import($revisionContent, $nodePath);
 
             $importedNodeIdentifiers = $this->nodeImportService->getPersistedNodeIdentifiers();
-            $this->handleUnkownNodesInTargetPath($importedNodeIdentifiers, $node->getPath(), $liveWorkspace);
+            $this->handleUnknownNodesInTargetPath($importedNodeIdentifiers, $node->getPath(), $liveWorkspace);
 
             $this->logger->info(sprintf('Applied revision %s on node %s', $revision->getIdentifier(), $node->getIdentifier()));
 
@@ -348,7 +348,7 @@ class RevisionService
         return $this->revisionRepository->removeAllOlderThan($since);
     }
 
-    protected function handleUnkownNodesInTargetPath(array $importedNodeIdentifiers, string $startingPointNodePath, Workspace $workspace): void
+    protected function handleUnknownNodesInTargetPath(array $importedNodeIdentifiers, string $startingPointNodePath, Workspace $workspace): void
     {
         $nodes = $this->nodeService->findContentNodes($startingPointNodePath, $workspace);
 
