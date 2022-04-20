@@ -88,7 +88,7 @@
                 <target>Revision {label} von "{creator}" aktualisiert.</target>
             </trans-unit>
 
-            <trans-unit id="error.failedFetchingExpressions">
+            <trans-unit id="error.failedFetchingRevisions">
                 <source>An error occurred while fetching revisions.</source>
                 <target>Beim Abrufen von Revisionen ist ein Fehler aufgetreten.</target>
             </trans-unit>
@@ -128,6 +128,35 @@
             <trans-unit id="confirm.applyRevision">
                 <source>Do you want to apply revision {revisionDate} by {creator}?</source>
                 <target>Möchten Sie Revision {revisionDate} von {creator} anwenden?</target>
+            </trans-unit>
+
+            <trans-unit id="diff.header">
+                <source>Version "{version}" (created on {date}) contains the following changes:</source>
+                <target>Version "{version}" (erstellt am {date}) enthält die folgenden Änderungen:</target>
+            </trans-unit>
+            <trans-unit id="diff.propertyLabel">
+                <source>Modification of the "{propertyLabel}" property</source>
+                <target>Änderung der Eigenschaft "{propertyLabel}"</target>
+            </trans-unit>
+            <trans-unit id="diff.removeNode">
+                <source>Remove</source>
+                <target>Entferne</target>
+            </trans-unit>
+            <trans-unit id="diff.addNode">
+                <source>Add</source>
+                <target>Füge hinzu</target>
+            </trans-unit>
+            <trans-unit id="diff.changeNode">
+                <source>Update</source>
+                <target>Aktualisiere</target>
+            </trans-unit>
+            <trans-unit id="diff.old">
+                <source>Old</source>
+                <target>Alt</target>
+            </trans-unit>
+            <trans-unit id="diff.new">
+                <source>New</source>
+                <target>Neu</target>
             </trans-unit>
         </body>
     </file>

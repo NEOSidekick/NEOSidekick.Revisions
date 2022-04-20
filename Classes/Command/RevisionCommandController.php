@@ -15,6 +15,7 @@ namespace CodeQ\Revisions\Command;
 
 use CodeQ\Revisions\Domain\Model\Revision;
 use Neos\ContentRepository\Domain\Service\ContextFactoryInterface;
+use Neos\Diff\Renderer\Text\TextUnifiedRenderer;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Cli\CommandController;
 use CodeQ\Revisions\Service\RevisionService;
@@ -111,19 +112,7 @@ class RevisionCommandController extends CommandController
      */
     public function applyCommand(string $revisionIdentifier): void
     {
-        $revision = $this->revisionService->getRevision($revisionIdentifier);
-
-        if ($revision === null) {
-            $this->outputLine('Revision not found');
-            $this->quit(1);
-        }
-
-        $node = $this->contextFactory->create()->getNodeByIdentifier($revision->getNodeIdentifier());
-
-        if (!$node) {
-            $this->outputLine('Node for revision not found');
-            $this->quit(1);
-        }
+        [$revision, $node] = $this->getRevisionAndNode($revisionIdentifier);
 
         if (!$this->output->askConfirmation(
             sprintf(
@@ -158,5 +147,37 @@ class RevisionCommandController extends CommandController
         $sinceDateTime = $since ? new \DateTime($since) : null;
         $count = $this->revisionService->flush($sinceDateTime);
         $this->outputLine(sprintf('%d revisions flushed', $count));
+    }
+
+    public function compareCommand(string $revisionIdentifier): void
+    {
+        [$revision, $node] = $this->getRevisionAndNode($revisionIdentifier);
+        $diff = $this->revisionService->compareRevision($revision, $node->getParentPath(), new TextUnifiedRenderer());
+        $headers = ['Type', 'Node identifier', 'Property', 'Diff', 'Old value', 'New value'];
+        $rows = array_merge(...array_values($diff));
+        $this->output->outputTable($rows, $headers);
+    }
+
+    /**
+     * @return array[Revision, NodeInterface]
+     * @throws StopCommandException
+     */
+    protected function getRevisionAndNode(string $revisionIdentifier): array
+    {
+        $revision = $this->revisionService->getRevision($revisionIdentifier);
+
+        if ($revision === null) {
+            $this->outputLine('Revision not found');
+            $this->quit(1);
+        }
+
+        $node = $this->contextFactory->create()->getNodeByIdentifier($revision->getNodeIdentifier());
+
+        if (!$node) {
+            $this->outputLine('Node for revision not found');
+            $this->quit(1);
+        }
+
+        return [$revision, $node];
     }
 }

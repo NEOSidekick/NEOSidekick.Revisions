@@ -68,7 +68,7 @@
                 <source>Revision {label} by "{creator}" updated.</source>
             </trans-unit>
 
-            <trans-unit id="error.failedFetchingExpressions">
+            <trans-unit id="error.failedFetchingRevisions">
                 <source>An error occurred while fetching revisions.</source>
             </trans-unit>
             <trans-unit id="error.failedApplyingRevision">
@@ -98,6 +98,28 @@
 
             <trans-unit id="confirm.applyRevision">
                 <source>Do you want to apply revision {revisionDate} by {creator}?</source>
+            </trans-unit>
+
+            <trans-unit id="diff.header">
+                <source>Version "{version}" (created on {date}) contains the following changes:</source>
+            </trans-unit>
+            <trans-unit id="diff.propertyLabel">
+                <source>Modification of the "{propertyLabel}" property</source>
+            </trans-unit>
+            <trans-unit id="diff.removeNode">
+                <source>Remove</source>
+            </trans-unit>
+            <trans-unit id="diff.addNode">
+                <source>Add</source>
+            </trans-unit>
+            <trans-unit id="diff.changeNode">
+                <source>Update</source>
+            </trans-unit>
+            <trans-unit id="diff.old">
+                <source>Old</source>
+            </trans-unit>
+            <trans-unit id="diff.new">
+                <source>New</source>
             </trans-unit>
         </body>
     </file>

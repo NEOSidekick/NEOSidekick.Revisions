@@ -3,21 +3,31 @@ declare(strict_types=1);
 
 namespace CodeQ\Revisions\Service;
 
+use Neos\ContentRepository\Domain\Model\Node;
 use Neos\ContentRepository\Domain\Model\NodeData;
+use Neos\ContentRepository\Domain\Model\NodeDimension;
 use Neos\ContentRepository\Domain\Model\NodeInterface;
+use Neos\ContentRepository\Domain\Model\NodeType;
 use Neos\ContentRepository\Domain\Model\Workspace;
 use Neos\ContentRepository\Domain\Service\ContextFactoryInterface;
+use Neos\ContentRepository\Domain\Service\NodeTypeManager;
 use Neos\ContentRepository\Exception\ImportException;
+use Neos\Diff\Diff;
+use Neos\Diff\Renderer\AbstractRenderer;
 use Neos\Eel\FlowQuery\FlowQuery;
 use Neos\Flow\Annotations as Flow;
 use CodeQ\Revisions\Domain\Model\Revision;
 use CodeQ\Revisions\Domain\Repository\RevisionRepository;
+use Neos\Flow\I18n\EelHelper\TranslationHelper;
+use Neos\Flow\I18n\EelHelper\TranslationParameterToken;
 use Neos\Flow\I18n\Formatter\DatetimeFormatter;
 use Neos\Flow\I18n\Service as I18nService;
 use Neos\Flow\I18n\Translator;
 use Neos\Flow\Persistence\Exception\IllegalObjectTypeException;
 use Neos\Flow\Persistence\PersistenceManagerInterface;
 use Neos\Flow\Security\Context;
+use Neos\Media\Domain\Model\AssetInterface;
+use Neos\Media\Domain\Model\ImageInterface;
 use Neos\Neos\Fusion\Cache\ContentCacheFlusher;
 use Psr\Log\LoggerInterface;
 
@@ -110,6 +120,17 @@ class RevisionService
      */
     protected $localizationService;
 
+    /**
+     * @var TranslationHelper
+     */
+    protected $translationHelper;
+
+    /**
+     * @Flow\Inject
+     * @var NodeTypeManager
+     */
+    protected $nodeTypeManager;
+
     public function createRevision(NodeInterface $node, string $label = null): ?Revision
     {
         return $this->createRevisionInternal($node, $label);
@@ -183,7 +204,7 @@ class RevisionService
 
         $revisionContent = $revision->getContent();
         if (!$revisionContent) {
-            $this->logger->warning(sprintf('Could not find revision content for revision %s', $identifier));
+            $this->logger->warning(sprintf('Could not find any content in revision %s', $identifier));
             return false;
         }
 
@@ -223,6 +244,148 @@ class RevisionService
         }
 
         return $success;
+    }
+
+    /**
+     * @return array<string, array> List of changes by node identifier
+     * @throws IllegalObjectTypeException
+     */
+    public function compareRevision(Revision $revision, string $parentPath, AbstractRenderer $renderer): array
+    {
+        $revisionContent = $revision->getContent();
+        if (!$revisionContent) {
+            $this->logger->warning(sprintf('Could not find any content in revision %s', $revision->getIdentifier()));
+            return [];
+        }
+
+        $context = $this->contextFactory->create();
+        $revisionRootNode = $context->getNodeByIdentifier($revision->getNodeIdentifier());
+
+        if (!$revisionRootNode) {
+            $this->logger->warning(sprintf('Could not find any rootnode of revision %s', $revision->getIdentifier()));
+            return [];
+        }
+
+        $nodesInImport = $this->nodeImportService->getNodesInImport($revisionContent, $parentPath);
+        $existingNodesInTargetPath = $this->nodeService->findContentNodes($revisionRootNode->getPath(), $context->getWorkspace());
+
+        $changesByNode = [];
+        foreach ($nodesInImport as $nodeDataInImport) {
+            $importedNodeIdentifier = $nodeDataInImport['identifier'];
+            $existingNode = $context->getNodeByIdentifier($importedNodeIdentifier);
+            $importedProperties = $nodeDataInImport['properties'];
+
+            if (!$existingNode) {
+                $importedNodeTypeName = $nodeDataInImport['nodeType'];
+                $importedNodeType = $this->nodeTypeManager->getNodeType($importedNodeTypeName);
+
+                $changesByNode[$importedNodeIdentifier] = [
+                    'type' => 'addNode',
+                    'node' => [
+                        'label' => $this->translate($importedNodeType->getLabel()),
+                        'lastModificationDateTime' => $nodeDataInImport['lastModificationDateTime'],
+                        'dimensions' => $nodeDataInImport['dimensionValues'] ?? [],
+                        'nodeType' => [
+                            'name' => $importedNodeType->getName(),
+                            'label' => $this->translate($importedNodeType->getLabel()),
+                            'icon' => $importedNodeType->getConfiguration('ui.icon') ?? 'question',
+                        ],
+                    ],
+                    // TODO: Generate diff. This is currently not easiyl possible as we need a NodeData object instead of an array.
+                ];
+                continue;
+            }
+
+            // Filter existing nodes that are part of the import
+            $existingNodesInTargetPath = array_filter($existingNodesInTargetPath, static function ($existingNode) use ($importedNodeIdentifier) {
+                return $existingNode->getIdentifier() !== $importedNodeIdentifier;
+            });
+
+            $changes = $this->generateNodeDiff(
+                $existingNode,
+                $importedProperties,
+                $renderer
+            );
+
+            // Skip empty changes
+            $existingNodeTimestamp = $existingNode->getLastModificationDateTime()->getTimestamp();
+            $importedNodeTimestamp = $nodeDataInImport['lastModificationDateTime']->getTimestamp();
+            $isChanged = $existingNodeTimestamp !== $importedNodeTimestamp || $changes['type'] !== 'changeNode' || !empty($changes['contentChanges']);
+
+            if ($isChanged)   {
+                $changesByNode[$importedNodeIdentifier] = $changes;
+            }
+        }
+
+        // Create diff for nodes that are not part of the import
+        foreach ($existingNodesInTargetPath as $existingNodeData) {
+            $identifier = $existingNodeData->getIdentifier();
+            $existingNode = $context->getNodeByIdentifier($identifier);
+            $changesByNode[$identifier] = $this->generateNodeDiff(
+                $existingNode,
+                null,
+                $renderer
+            );
+        }
+
+        return $changesByNode;
+    }
+
+    protected function translate(string $id): string
+    {
+        if (!$this->translationHelper) {
+            $this->translationHelper = new TranslationHelper();
+        }
+        return $this->translationHelper->translate($id) ?? $id;
+    }
+
+    /**
+     * Adapted from \Neos\Neos\Controller\Module\Management\WorkspacesController
+     */
+    protected function getPropertyLabel(string $propertyName, NodeType $nodeType): string
+    {
+        $properties = $nodeType->getProperties();
+        if (isset($properties[$propertyName]['ui']['label'])) {
+            return $this->translate($properties[$propertyName]['ui']['label']);
+        }
+        return $propertyName;
+    }
+
+    /**
+     * Adapted from \Neos\Neos\Controller\Module\Management\WorkspacesController
+     */
+    protected function renderSlimmedDownContent($propertyValue): string
+    {
+        if (is_string($propertyValue)) {
+            $contentSnippet = preg_replace('/<br[^>]*>/', "\n", $propertyValue);
+            $contentSnippet = preg_replace('/<[^>]*>/', ' ', $contentSnippet);
+            $contentSnippet = str_replace('&nbsp;', ' ', $contentSnippet);
+            return trim(preg_replace('/ {2,}/', ' ', $contentSnippet));
+        }
+        return '';
+    }
+
+    /**
+     * Copied from \Neos\Neos\Controller\Module\Management\WorkspacesController
+     */
+    protected function postProcessDiffArray(array &$diffArray): void
+    {
+        foreach ($diffArray as $index => $blocks) {
+            foreach ($blocks as $blockIndex => $block) {
+                $baseLines = trim(implode('', $block['base']['lines']), " \t\n\r\0\xC2\xA0");
+                $changedLines = trim(implode('', $block['changed']['lines']), " \t\n\r\0\xC2\xA0");
+                if ($baseLines === '') {
+                    foreach ($block['changed']['lines'] as $lineIndex => $line) {
+                        $diffArray[$index][$blockIndex]['changed']['lines'][$lineIndex] = '<ins>' . $line . '</ins>';
+                    }
+                }
+                if ($changedLines === '') {
+                    foreach ($block['base']['lines'] as $lineIndex => $line) {
+                        $diffArray[$index][$blockIndex]['base']['lines'][$lineIndex] = '<del>' . $line . '</del>';
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -358,6 +521,88 @@ class RevisionService
         });
 
         $this->nodeService->removeNodes($unknownNodes);
+    }
+
+    protected function generateNodeDiff(
+        NodeInterface $existingNode,
+        array $importedProperties = null,
+        AbstractRenderer $renderer = null
+    ): array
+    {
+        if (!$renderer) {
+            return [];
+        }
+
+        $changes = [
+            'type' => $importedProperties === null ? 'removeNode' : 'changeNode',
+            'node' => [
+                'identifier' => $existingNode->getIdentifier(),
+                'label' => $existingNode->getLabel(),
+                'lastModificationDateTime' => $existingNode->getLastPublicationDateTime(),
+                'dimensions' => $existingNode->getDimensions(),
+                'nodeType' => [
+                    'name' => $existingNode->getNodeType()->getName(),
+                    'label' => $this->translate($existingNode->getNodeType()->getLabel()),
+                    'icon' => $existingNode->getNodeType()->getConfiguration('ui.icon') ?? 'question',
+                ],
+            ],
+            'contentChanges' => [],
+        ];
+
+        foreach ($existingNode->getProperties() as $propertyName => $originalPropertyValue) {
+            $changedPropertyValue = $importedProperties[$propertyName] ?? '';
+            $diff = '';
+            $type = '';
+
+            if ($changedPropertyValue === $originalPropertyValue && !$existingNode->isRemoved()) {
+                continue;
+            }
+
+            if (!is_object($originalPropertyValue) && !is_object($changedPropertyValue)) {
+                $originalSlimmedDownContent = $this->renderSlimmedDownContent($originalPropertyValue);
+                $changedSlimmedDownContent = $existingNode->isRemoved() ? '' : $this->renderSlimmedDownContent($changedPropertyValue);
+
+                $rawDiff = new Diff(explode("\n", $originalSlimmedDownContent), explode("\n", $changedSlimmedDownContent), ['context' => 1]);
+                $diffArray = $rawDiff->render($renderer);
+
+                if (is_array($diffArray)) {
+                    $this->postProcessDiffArray($diffArray);
+                }
+
+                if ($diffArray) {
+                    $type = 'text';
+                    $diff = $diffArray;
+                }
+                // The && in belows condition is on purpose as creating a thumbnail for comparison only works if actually
+                // BOTH are ImageInterface (or NULL).
+            } elseif (
+                ($originalPropertyValue instanceof ImageInterface || $originalPropertyValue === null)
+                && ($changedPropertyValue instanceof ImageInterface || $changedPropertyValue === null)
+            ) {
+                $type = 'image';
+            } elseif ($originalPropertyValue instanceof AssetInterface || $changedPropertyValue instanceof AssetInterface) {
+                $type = 'asset';
+            } elseif ($originalPropertyValue instanceof \DateTime || $changedPropertyValue instanceof \DateTime) {
+                $changed = false;
+                if (!$changedPropertyValue instanceof \DateTime || !$originalPropertyValue instanceof \DateTime) {
+                    $changed = true;
+                } elseif ($changedPropertyValue->getTimestamp() !== $originalPropertyValue->getTimestamp()) {
+                    $changed = true;
+                }
+                if ($changed) {
+                    $type = 'datetime';
+                }
+            }
+
+            $changes['contentChanges'][$propertyName] = [
+                'type' => $type,
+                'propertyLabel' => $this->getPropertyLabel($propertyName, $existingNode->getNodeType()),
+                'original' => $originalPropertyValue,
+                'changed' => $changedPropertyValue,
+                'diff' => $diff,
+            ];
+        }
+        return $changes;
     }
 
 }

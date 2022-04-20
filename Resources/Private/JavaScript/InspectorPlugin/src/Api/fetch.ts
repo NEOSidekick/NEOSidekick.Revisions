@@ -35,7 +35,15 @@ type SetLabelProps = {
     };
 };
 
-type FetchProps = GetRevisionsProps | ApplyRevisionProps | DeleteRevisionProps | SetLabelProps;
+type GetDiffProps = {
+    action: 'getDiff';
+    params: {
+        node: Node;
+        revision: Revision;
+    };
+};
+
+type FetchProps = GetRevisionsProps | ApplyRevisionProps | DeleteRevisionProps | SetLabelProps | GetDiffProps;
 
 class ApplyError extends Error {
     private readonly _status: number;
@@ -57,10 +65,7 @@ class ApplyError extends Error {
     }
 }
 
-export default function fetchFromBackend(
-    props: FetchProps,
-    setLoadingState: (state) => void
-): Promise<{ revisions: Revision[] }> {
+export default function fetchFromBackend<T = {}>(props: FetchProps, setLoadingState: (state) => void): Promise<T> {
     setLoadingState(true);
 
     // Cannot use URL object here due to missing Safari support

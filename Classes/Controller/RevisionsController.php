@@ -16,6 +16,7 @@ namespace CodeQ\Revisions\Controller;
 use CodeQ\Revisions\Domain\Model\Revision;
 use CodeQ\Revisions\Service\RevisionService;
 use Neos\ContentRepository\Domain\Model\NodeInterface;
+use Neos\Diff\Renderer\Html\HtmlArrayRenderer;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\I18n\Translator;
 use Neos\Flow\Mvc\Controller\ActionController;
@@ -90,6 +91,23 @@ class RevisionsController extends ActionController
 
         $this->view->assign('value', [
             'success' => true,
+        ]);
+    }
+
+    public function getDiffAction(NodeInterface $node = null, Revision $revision = null): void
+    {
+        if (!$node) {
+            $this->throwStatus(404, $this->translate('error.nodeNotFound', 'Page not found'));
+        }
+
+        if (!$revision) {
+            $this->throwStatus(404, $this->translate('error.revisionNotFound', 'Revision not found'));
+        }
+
+        $diff = $this->revisionService->compareRevision($revision, $node->getParentPath(), new HtmlArrayRenderer());
+
+        $this->view->assign('value', [
+            'diff' => $diff,
         ]);
     }
 

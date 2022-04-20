@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { IconButton, Icon } from '@neos-project/react-ui-components';
+import { Icon } from '@neos-project/react-ui-components';
 
 import Node from '../Interfaces/Node';
 import Revision from '../Interfaces/Revision';
@@ -7,6 +7,8 @@ import fetchFromBackend from '../Api/fetch';
 import { formatRevisionDate } from '../Helpers/format';
 import I18nRegistry from '../Interfaces/I18nRegistry';
 import RevisionDetails from './RevisionDetails';
+import RevisionDiff from './RevisionDiff';
+import RevisionListItem from './RevisionListItem';
 
 interface Props {
     documentNode: Node;
@@ -17,6 +19,8 @@ interface Props {
         [key: string]: any;
         showDeleteButton: boolean;
     };
+    renderSecondaryInspector: (identifier: string, component: () => React.ReactNode) => void;
+    contentDimensions: ContentDimensions;
 }
 
 const RevisionList: React.FC<Props> = ({
@@ -25,6 +29,8 @@ const RevisionList: React.FC<Props> = ({
     reloadDocument,
     i18nRegistry,
     frontendConfiguration,
+    renderSecondaryInspector,
+    contentDimensions,
 }) => {
     const [revisions, setRevisions] = useState<Revision[]>([]);
     const [message, setMessage] = useState('');
@@ -46,10 +52,10 @@ const RevisionList: React.FC<Props> = ({
 
     const fetchRevisions = useCallback(() => {
         setIsLoading(true);
-        fetchFromBackend({ action: 'get', params: { node: documentNode } }, setIsLoading)
-            .then(({ revisions }: { revisions: Revision[] }) => setRevisions(revisions))
+        fetchFromBackend<{ revisions: Revision[] }>({ action: 'get', params: { node: documentNode } }, setIsLoading)
+            .then(({ revisions }) => setRevisions(revisions))
             .catch((error) => {
-                setMessage(translate('error.failedFetchingExpressions'));
+                setMessage(translate('error.failedFetchingRevisions'));
                 console.error(error.message);
             });
     }, [documentNode]);
@@ -69,44 +75,34 @@ const RevisionList: React.FC<Props> = ({
     }, []);
 
     const applyRevision = useCallback((revision: Revision, force = false) => {
-        if (
-            force ||
-            confirm(
-                translate('confirm.applyRevision', 'Do you want to apply revision {revisionDate} by {creator}?', {
-                    revisionDate: formatRevisionDate(revision),
-                    creator: revision.creator,
-                })
-            )
-        ) {
-            fetchFromBackend(
-                {
-                    action: 'apply',
-                    params: { node: documentNode, revision, force },
-                },
-                setIsLoading
-            )
-                .then(() => {
-                    addFlashMessage(
-                        translate('success.revisionApplied'),
-                        translate('success.revisionApplied.message', 'Revision "{label}" by "{creator}" applied.', {
-                            label: revision.label || formatRevisionDate(revision),
-                            creator: revision.creator,
-                        }),
-                        'success'
-                    );
-                    reloadDocument();
-                    setMessage('');
-                })
-                .catch((error) => {
-                    const { status, conflicts } = error;
-                    if (status === 409) {
-                        resolveConflicts(revision, conflicts);
-                    } else {
-                        setMessage(translate('error.failedApplyingRevision'));
-                        console.error(error);
-                    }
-                });
-        }
+        fetchFromBackend(
+            {
+                action: 'apply',
+                params: { node: documentNode, revision, force },
+            },
+            setIsLoading
+        )
+            .then(() => {
+                addFlashMessage(
+                    translate('success.revisionApplied'),
+                    translate('success.revisionApplied.message', 'Revision "{label}" by "{creator}" applied.', {
+                        label: revision.label || formatRevisionDate(revision),
+                        creator: revision.creator,
+                    }),
+                    'success'
+                );
+                reloadDocument();
+                setMessage('');
+            })
+            .catch((error) => {
+                const { status, conflicts } = error;
+                if (status === 409) {
+                    resolveConflicts(revision, conflicts);
+                } else {
+                    setMessage(translate('error.failedApplyingRevision'));
+                    console.error(error);
+                }
+            });
     }, []);
 
     const deleteRevision = useCallback((revision: Revision) => {
@@ -165,6 +161,23 @@ const RevisionList: React.FC<Props> = ({
         [selectedRevision]
     );
 
+    const showRevision = useCallback((revision?: Revision) => {
+        if (!revision) {
+            renderSecondaryInspector(null, null);
+        } else {
+            renderSecondaryInspector('REVISIONS_COMPARE', () => (
+                <RevisionDiff
+                    documentNode={documentNode}
+                    translate={translate}
+                    revision={revision}
+                    onClose={showRevision}
+                    applyRevision={applyRevision}
+                    contentDimensions={contentDimensions}
+                />
+            ));
+        }
+    }, []);
+
     useEffect(fetchRevisions, [documentNode]);
 
     return (
@@ -198,75 +211,15 @@ const RevisionList: React.FC<Props> = ({
                     <tbody>
                         {revisions.map((revision, index) => (
                             <React.Fragment key={index}>
-                                <tr key={revision.creationDateTime}>
-                                    <td
-                                        title={translate(
-                                            'tooltip.revisionLabel',
-                                            'Created on {revisionDate} by {creator}',
-                                            {
-                                                revisionDate: formatRevisionDate(revision),
-                                                creator: revision.creator,
-                                            }
-                                        )}
-                                    >
-                                        <div>
-                                            {revision.label ||
-                                                translate('revision.label', 'By {creator}', {
-                                                    creator: revision.creator,
-                                                })}
-                                        </div>
-                                        <time style={{ opacity: 0.5 }}>{formatRevisionDate(revision)}</time>
-                                    </td>
-                                    <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
-                                        <IconButton
-                                            onClick={() => applyRevision(revision)}
-                                            icon="trash-restore"
-                                            style="primary"
-                                            hoverStyle="success"
-                                            size="small"
-                                            title={translate(
-                                                'action.apply.title',
-                                                'Apply revision {revisionDate} by {creator}',
-                                                {
-                                                    revisionDate: formatRevisionDate(revision),
-                                                    creator: revision.creator,
-                                                }
-                                            )}
-                                        />
-                                        <IconButton
-                                            onClick={() => setSelectedRevision(revision)}
-                                            icon="comment"
-                                            style="primary"
-                                            hoverStyle="warn"
-                                            size="small"
-                                            title={translate(
-                                                'action.edit.title',
-                                                'Edit revision {revisionDate} by {creator}',
-                                                {
-                                                    revisionDate: formatRevisionDate(revision),
-                                                    creator: revision.creator,
-                                                }
-                                            )}
-                                        />
-                                        {frontendConfiguration.showDeleteButton && (
-                                            <IconButton
-                                                onClick={() => deleteRevision(revision)}
-                                                icon="times-circle"
-                                                style="primary"
-                                                hoverStyle="error"
-                                                size="small"
-                                                title={translate(
-                                                    'action.delete.title',
-                                                    'Delete revision {revisionDate} by {creator}',
-                                                    {
-                                                        revisionDate: formatRevisionDate(revision),
-                                                        creator: revision.creator,
-                                                    }
-                                                )}
-                                            />
-                                        )}
-                                    </td>
-                                </tr>
+                                <RevisionListItem
+                                    allowApply={index > 0}
+                                    revision={revision}
+                                    translate={translate}
+                                    showDeleteButton={frontendConfiguration.showDeleteButton}
+                                    deleteRevision={deleteRevision}
+                                    setSelectedRevision={setSelectedRevision}
+                                    showRevision={showRevision}
+                                />
                                 {index < revisions.length - 1 && (
                                     <tr>
                                         <td colSpan={2} style={{ borderBottom: '1px solid #3f3f3f' }} />

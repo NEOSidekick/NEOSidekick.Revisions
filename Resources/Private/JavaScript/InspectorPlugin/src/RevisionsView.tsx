@@ -20,6 +20,9 @@ import I18nRegistry from './Interfaces/I18nRegistry';
 @connect(
     $transform({
         documentNodePath: $get('cr.nodes.documentNode'),
+        contentDimensions: selectors.CR.ContentDimensions.byName,
+        allowedPresets: selectors.CR.ContentDimensions.allowedPresets,
+        activePresets: selectors.CR.ContentDimensions.activePresets,
     }),
     {
         addFlashMessage: actions.UI.FlashMessages.add,
@@ -36,10 +39,12 @@ export default class RevisionsView extends PureComponent<{
     addFlashMessage: (title: string, message: string, severity?: string, timeout?: number) => void;
     reloadDocument: () => void;
     i18nRegistry: I18nRegistry;
+    renderSecondaryInspector: (identifier: string, component: () => React.ReactNode) => void;
     frontendConfiguration: {
         [key: string]: any;
         showDeleteButton: boolean;
     };
+    contentDimensions: ContentDimensions;
 }> {
     static propTypes = {
         documentNodePath: PropTypes.string.isRequired,
@@ -48,6 +53,7 @@ export default class RevisionsView extends PureComponent<{
         addFlashMessage: PropTypes.func.isRequired,
         reloadDocument: PropTypes.func.isRequired,
         frontendConfiguration: PropTypes.object.isRequired,
+        renderSecondaryInspector: PropTypes.func.isRequired,
     };
 
     constructor(props) {
@@ -56,14 +62,24 @@ export default class RevisionsView extends PureComponent<{
 
     render() {
         const documentNode = this.props.getNodeByContextPath(this.props.documentNodePath);
+        const {
+            addFlashMessage,
+            reloadDocument,
+            i18nRegistry,
+            frontendConfiguration,
+            renderSecondaryInspector,
+            contentDimensions,
+        } = this.props;
 
         return (
             <RevisionList
                 documentNode={documentNode}
-                addFlashMessage={this.props.addFlashMessage}
-                reloadDocument={this.props.reloadDocument}
-                i18nRegistry={this.props.i18nRegistry}
-                frontendConfiguration={this.props.frontendConfiguration}
+                addFlashMessage={addFlashMessage}
+                reloadDocument={reloadDocument}
+                i18nRegistry={i18nRegistry}
+                frontendConfiguration={frontendConfiguration}
+                renderSecondaryInspector={renderSecondaryInspector}
+                contentDimensions={contentDimensions}
             />
         );
     }
