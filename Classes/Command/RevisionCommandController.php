@@ -153,8 +153,17 @@ class RevisionCommandController extends CommandController
     {
         [$revision, $node] = $this->getRevisionAndNode($revisionIdentifier);
         $diff = $this->revisionService->compareRevision($revision, $node->getParentPath(), new TextUnifiedRenderer());
-        $headers = ['Type', 'Node identifier', 'Property', 'Diff', 'Old value', 'New value'];
-        $rows = array_merge(...array_values($diff));
+        $headers = ['Type', 'Node', 'Label', 'Diff'];
+        $rows = array_map(static function ($nodeChange) {
+            return [
+                $nodeChange['type'],
+                $nodeChange['node']['identifier'],
+                $nodeChange['node']['label'],
+                implode("\n", array_map(static function ($property) use ($nodeChange) {
+                    return sprintf("%s:\n%s", $property, $nodeChange['contentChanges'][$property]['diff']);
+                }, array_keys($nodeChange['contentChanges'] ?? []))),
+            ];
+        }, $diff);
         $this->output->outputTable($rows, $headers);
     }
 

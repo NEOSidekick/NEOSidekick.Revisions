@@ -20,7 +20,7 @@ use Neos\Neos\Service\PublishingService;
 
 class Package extends BasePackage
 {
-    public function boot(Bootstrap $bootstrap)
+    public function boot(Bootstrap $bootstrap): void
     {
         $dispatcher = $bootstrap->getSignalSlotDispatcher();
         $dispatcher->connect(
