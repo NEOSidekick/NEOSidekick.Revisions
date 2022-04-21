@@ -492,8 +492,21 @@ class RevisionService
      */
     public function shutdownObject(): void
     {
+        if (empty(self::$nodesForRevisions)) {
+            return;
+        }
+
+        $context = $this->contextFactory->create();
+
         foreach (self::$nodesForRevisions as $node) {
-            $this->createRevision($node);
+            // Make sure we have fresh nodedata from CR
+            $nodeId = $node->getIdentifier();
+            $node->getContext()->getFirstLevelNodeCache()->flush();
+            $nodeToUse = $context->getNodeByIdentifier($nodeId);
+
+            if ($nodeToUse) {
+                $this->createRevision($nodeToUse);
+            }
         }
         $this->persistenceManager->persistAll();
     }
