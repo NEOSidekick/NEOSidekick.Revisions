@@ -3,15 +3,15 @@ declare(strict_types=1);
 
 namespace CodeQ\Revisions\Service;
 
-use Neos\ContentRepository\Domain\Model\Node;
 use Neos\ContentRepository\Domain\Model\NodeData;
-use Neos\ContentRepository\Domain\Model\NodeDimension;
 use Neos\ContentRepository\Domain\Model\NodeInterface;
 use Neos\ContentRepository\Domain\Model\NodeType;
 use Neos\ContentRepository\Domain\Model\Workspace;
+use Neos\ContentRepository\Domain\Service\Context as ContentContext;
 use Neos\ContentRepository\Domain\Service\ContextFactoryInterface;
 use Neos\ContentRepository\Domain\Service\NodeTypeManager;
 use Neos\ContentRepository\Exception\ImportException;
+use Neos\ContentRepository\Utility;
 use Neos\Diff\Diff;
 use Neos\Diff\Renderer\AbstractRenderer;
 use Neos\Eel\FlowQuery\FlowQuery;
@@ -19,7 +19,6 @@ use Neos\Flow\Annotations as Flow;
 use CodeQ\Revisions\Domain\Model\Revision;
 use CodeQ\Revisions\Domain\Repository\RevisionRepository;
 use Neos\Flow\I18n\EelHelper\TranslationHelper;
-use Neos\Flow\I18n\EelHelper\TranslationParameterToken;
 use Neos\Flow\I18n\Formatter\DatetimeFormatter;
 use Neos\Flow\I18n\Service as I18nService;
 use Neos\Flow\I18n\Translator;
@@ -272,14 +271,16 @@ class RevisionService
         $changesByNode = [];
         foreach ($nodesInImport as $nodeDataInImport) {
             $importedNodeIdentifier = $nodeDataInImport['identifier'];
-            $existingNode = $context->getNodeByIdentifier($importedNodeIdentifier);
+            $dimensionHash = Utility::sortDimensionValueArrayAndReturnDimensionsHash($nodeDataInImport['dimensionValues']);
+
+            $existingNode = $this->getExistingNode($context, $importedNodeIdentifier, $dimensionHash);
             $importedProperties = $nodeDataInImport['properties'];
 
             if (!$existingNode) {
                 $importedNodeTypeName = $nodeDataInImport['nodeType'];
                 $importedNodeType = $this->nodeTypeManager->getNodeType($importedNodeTypeName);
 
-                $changesByNode[$importedNodeIdentifier] = [
+                $changesByNode[$importedNodeIdentifier][$dimensionHash] = [
                     'type' => 'addNode',
                     'node' => [
                         'label' => $this->translate($importedNodeType->getLabel()),
@@ -291,7 +292,7 @@ class RevisionService
                             'icon' => $importedNodeType->getConfiguration('ui.icon') ?? 'question',
                         ],
                     ],
-                    // TODO: Generate diff. This is currently not easiyl possible as we need a NodeData object instead of an array.
+                    // TODO: Generate diff. This is currently not easily possible as we need a NodeData object instead of an array.
                 ];
                 continue;
             }
@@ -312,16 +313,17 @@ class RevisionService
             $importedNodeTimestamp = $nodeDataInImport['lastModificationDateTime']->getTimestamp();
             $isChanged = $existingNodeTimestamp !== $importedNodeTimestamp || $changes['type'] !== 'changeNode' || !empty($changes['contentChanges']);
 
-            if ($isChanged)   {
-                $changesByNode[$importedNodeIdentifier] = $changes;
+            if ($isChanged) {
+                $changesByNode[$importedNodeIdentifier][$dimensionHash] = $changes;
             }
         }
 
         // Create diff for nodes that are not part of the import
         foreach ($existingNodesInTargetPath as $existingNodeData) {
             $identifier = $existingNodeData->getIdentifier();
+            $dimensionHash = $existingNodeData->getDimensionsHash();
             $existingNode = $context->getNodeByIdentifier($identifier);
-            $changesByNode[$identifier] = $this->generateNodeDiff(
+            $changesByNode[$identifier][$dimensionHash] = $this->generateNodeDiff(
                 $existingNode,
                 null,
                 $renderer
@@ -536,9 +538,12 @@ class RevisionService
         $this->nodeService->removeNodes($unknownNodes);
     }
 
+    /**
+     * @return array{type: string, node: array, contentChanges: array}
+     */
     protected function generateNodeDiff(
-        NodeInterface $existingNode,
-        array $importedProperties = null,
+        NodeInterface    $existingNode,
+        array            $importedProperties = null,
         AbstractRenderer $renderer = null
     ): array
     {
@@ -616,6 +621,20 @@ class RevisionService
             ];
         }
         return $changes;
+    }
+
+    protected function getExistingNode(ContentContext $context, string $importedNodeIdentifier, string $dimensionHash): ?NodeInterface
+    {
+        $nodeVariants = $context->getNodeVariantsByIdentifier($importedNodeIdentifier);
+
+        foreach ($nodeVariants as $nodeVariant) {
+            $variantDimensions = $nodeVariant->getDimensions();
+            $variantDimensionHash = Utility::sortDimensionValueArrayAndReturnDimensionsHash($variantDimensions);
+            if ($variantDimensionHash === $dimensionHash) {
+                return $nodeVariant;
+            }
+        }
+        return null;
     }
 
 }

@@ -65,20 +65,20 @@ const RevisionDiff: React.FC<RevisionDiffProps> = ({
                     <Icon icon="spinner" spin color="primaryBlue" /> Loading …
                 </div>
             ) : changes ? (
-                Object.keys(changes).map((nodeIdentifier) => (
+                Object.keys(changes).map((nodeIdentifier) => Object.keys(changes[nodeIdentifier]).map((dimensionHash) => (
                     <div key={nodeIdentifier} style={{ marginBottom: '1rem' }}>
                         <ErrorBoundary
-                            text={`Diff for node ${changes[nodeIdentifier].node?.label || nodeIdentifier} could not be rendered. Please check the logs.`}
+                            text={`Diff for node ${changes[nodeIdentifier][dimensionHash].node?.label || nodeIdentifier} could not be rendered. Please check the logs.`}
                         >
                             <ContentChangeDiff
-                                nodeChanges={changes[nodeIdentifier]}
+                                nodeChanges={changes[nodeIdentifier][dimensionHash]}
                                 translate={translate}
                                 contentDimensions={contentDimensions}
                             />
                         </ErrorBoundary>
                     </div>
                 ))
-            ) : (
+            )) : (
                 <p>{message}</p>
             )}
             <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'space-between' }}>

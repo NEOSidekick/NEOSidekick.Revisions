@@ -153,17 +153,21 @@ class RevisionCommandController extends CommandController
     {
         [$revision, $node] = $this->getRevisionAndNode($revisionIdentifier);
         $diff = $this->revisionService->compareRevision($revision, $node->getParentPath(), new TextUnifiedRenderer());
-        $headers = ['Type', 'Node', 'Label', 'Diff'];
-        $rows = array_map(static function ($nodeChange) {
-            return [
-                $nodeChange['type'],
-                $nodeChange['node']['identifier'],
-                $nodeChange['node']['label'],
-                implode("\n", array_map(static function ($property) use ($nodeChange) {
-                    return sprintf("%s:\n%s", $property, $nodeChange['contentChanges'][$property]['diff']);
-                }, array_keys($nodeChange['contentChanges'] ?? []))),
-            ];
-        }, $diff);
+        $headers = ['Type', 'Node', 'Dimensions', 'Label', 'Diff'];
+        $rows = array_reduce($diff, static function ($carry, $nodeChangeByDimension) {
+            foreach ($nodeChangeByDimension as $nodeChange) {
+                $carry[] = [
+                    $nodeChange['type'],
+                    $nodeChange['node']['identifier'],
+                    json_encode($nodeChange['node']['dimensions']),
+                    $nodeChange['node']['label'],
+                    implode("\n", array_map(static function ($property) use ($nodeChange) {
+                        return sprintf("%s:\n%s", $property, $nodeChange['contentChanges'][$property]['diff']);
+                    }, array_keys($nodeChange['contentChanges'] ?? []))),
+                ];
+            }
+            return $carry;
+        }, []);
         $this->output->outputTable($rows, $headers);
     }
 
