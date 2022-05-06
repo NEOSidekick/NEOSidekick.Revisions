@@ -94,7 +94,7 @@ class NodeExportService extends \Neos\ContentRepository\Domain\Service\ImportExp
             ->orderBy('n.identifier', 'ASC')
             ->orderBy('n.path', 'ASC');
 
-        $startingPointNodeData = $queryBuilder->getQuery()->getResult()[0];
+        $startingPointNodeData = $queryBuilder->getQuery()->getResult();
 
         $this->securityContext->withoutAuthorizationChecks(function () use ($startingPointNodePath, $startingPointNodeData, $workspace, $workspaceName, $nodeTypeFilter) {
             $nodes = $this->nodeService->findContentNodes($startingPointNodePath, $workspace, false);
@@ -104,7 +104,7 @@ class NodeExportService extends \Neos\ContentRepository\Domain\Service\ImportExp
                 function ($nodeDataList, NodeData $nodeData) use ($workspaceName, $nodeTypeFilter) {
                     return array_merge($nodeDataList, $this->findNodeDataListToExport($nodeData->getPath(), $workspaceName, $nodeTypeFilter));
                 },
-                [$startingPointNodeData]
+                $startingPointNodeData
             );
 
             usort(
