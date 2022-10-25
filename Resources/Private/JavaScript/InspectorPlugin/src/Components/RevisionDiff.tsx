@@ -56,31 +56,33 @@ const RevisionDiff: React.FC<RevisionDiffProps> = ({
     }, [revision]);
 
     return (
-        <div style={{ padding: '1rem' }}>
+        <div style={{ padding: '1rem', height: 'inherit', display: 'flex', flexDirection: 'column' }}>
             <h1 style={{ marginBottom: '2rem', fontSize: '1.5em' }}>
                 {translate('diff.header', 'The revision contains the following changes', { version, date: formatRevisionDate(revision) })}
             </h1>
-            {isLoading ? (
-                <div>
-                    <Icon icon="spinner" spin color="primaryBlue" /> Loading …
-                </div>
-            ) : changes && Object.keys(changes).length > 0 ? (
-                Object.keys(changes).map((nodeIdentifier) => Object.keys(changes[nodeIdentifier]).map((dimensionHash) => (
-                    <div key={nodeIdentifier} style={{ marginBottom: '1rem' }}>
-                        <ErrorBoundary
-                            text={`Diff for node ${changes[nodeIdentifier][dimensionHash].node?.label || nodeIdentifier} could not be rendered. Please check the logs.`}
-                        >
-                            <ContentChangeDiff
-                                nodeChanges={changes[nodeIdentifier][dimensionHash]}
-                                translate={translate}
-                                contentDimensions={contentDimensions}
-                            />
-                        </ErrorBoundary>
+            <div style={{ overflow: 'auto' }}>
+                {isLoading ? (
+                    <div>
+                        <Icon icon="spinner" spin color="primaryBlue" /> Loading …
                     </div>
-                ))
-            )) : (
-                <p>{message ? message : translate('diff.empty', 'No changes have been found')}</p>
-            )}
+                ) : changes && Object.keys(changes).length > 0 ? (
+                    Object.keys(changes).map((nodeIdentifier) => Object.keys(changes[nodeIdentifier]).map((dimensionHash) => (
+                        <div key={nodeIdentifier} style={{ marginBottom: '1rem' }}>
+                            <ErrorBoundary
+                                text={`Diff for node ${changes[nodeIdentifier][dimensionHash].node?.label || nodeIdentifier} could not be rendered. Please check the logs.`}
+                            >
+                                <ContentChangeDiff
+                                    nodeChanges={changes[nodeIdentifier][dimensionHash]}
+                                    translate={translate}
+                                    contentDimensions={contentDimensions}
+                                />
+                            </ErrorBoundary>
+                        </div>
+                    ))
+                )) : (
+                    <p>{message ? message : translate('diff.empty', 'No changes have been found')}</p>
+                )}
+            </div>
             <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'space-between' }}>
                 <Button style="warn" onClick={onClose}>
                     {translate('action.close')}

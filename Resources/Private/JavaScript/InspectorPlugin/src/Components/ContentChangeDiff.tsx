@@ -14,7 +14,7 @@ type ContentChangeDiffProps = {
 };
 
 const ContentChangeDiff: React.FC<ContentChangeDiffProps> = ({ nodeChanges, contentDimensions, translate }) => {
-    const { node, type, contentChanges = [] } = nodeChanges;
+    const { node, type, changes = [] } = nodeChanges;
 
     const changeColor = useMemo(() => {
         return type === 'changeNode' ? '#ff8700' : type === 'addNode' ? '#00a338' : '#ff460d';
@@ -71,8 +71,8 @@ const ContentChangeDiff: React.FC<ContentChangeDiffProps> = ({ nodeChanges, cont
                     {formatChangeDate(node.lastModificationDateTime)}
                 </span>
             </div>
-            {Object.keys(contentChanges).map((propertyName) => {
-                const { propertyLabel, type, diff, original, changed } = contentChanges[propertyName];
+            {Object.keys(changes).map((propertyName) => {
+                const { propertyLabel, type, diff, original, changed } = changes[propertyName];
                 return (
                     <div
                         key={propertyName}

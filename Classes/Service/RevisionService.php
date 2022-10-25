@@ -274,7 +274,6 @@ class RevisionService
             $dimensionHash = Utility::sortDimensionValueArrayAndReturnDimensionsHash($nodeDataInImport['dimensionValues']);
 
             $existingNode = $this->getExistingNode($context, $importedNodeIdentifier, $dimensionHash);
-            $importedProperties = $nodeDataInImport['properties'];
 
             if (!$existingNode) {
                 $importedNodeTypeName = $nodeDataInImport['nodeType'];
@@ -304,14 +303,14 @@ class RevisionService
 
             $changes = $this->generateNodeDiff(
                 $existingNode,
-                $importedProperties,
+                $nodeDataInImport,
                 $renderer
             );
 
             // Skip empty changes
             $existingNodeTimestamp = $existingNode->getLastModificationDateTime()->getTimestamp();
             $importedNodeTimestamp = $nodeDataInImport['lastModificationDateTime']->getTimestamp();
-            $isChanged = $existingNodeTimestamp !== $importedNodeTimestamp || $changes['type'] !== 'changeNode' || !empty($changes['contentChanges']);
+            $isChanged = $existingNodeTimestamp !== $importedNodeTimestamp || $changes['type'] !== 'changeNode' || !empty($changes['changes']);
 
             if ($isChanged) {
                 $changesByNode[$importedNodeIdentifier][$dimensionHash] = $changes;
@@ -539,17 +538,19 @@ class RevisionService
     }
 
     /**
-     * @return array{type: string, node: array, contentChanges: array}
+     * @return array{type: string, node: array, changes: array}
      */
     protected function generateNodeDiff(
         NodeInterface    $existingNode,
-        array            $importedProperties = null,
+        array            $importedNodeData = null,
         AbstractRenderer $renderer = null
     ): array
     {
         if (!$renderer) {
             return [];
         }
+
+        $importedProperties = $importedNodeData['properties'] ?? [];
 
         $changes = [
             'type' => $importedProperties === null ? 'removeNode' : 'changeNode',
@@ -564,8 +565,39 @@ class RevisionService
                     'icon' => $existingNode->getNodeType()->getConfiguration('ui.icon') ?? 'question',
                 ],
             ],
-            'contentChanges' => [],
+            'changes' => [],
         ];
+
+        if ($importedNodeData) {
+            // Check for changes to nodes attributes
+            if ($existingNode->getNodeData()->getLastModificationDateTime() != $importedNodeData['lastModificationDateTime']) {
+                $changes['changes']['lastModificationDateTime'] = [
+                    'type' => 'datetime',
+                    'propertyLabel' => 'Last modification date',
+                    'original' => $existingNode->getNodeData()->getLastModificationDateTime(),
+                    'changed' => $importedNodeData['lastModificationDateTime'],
+                    'diff' => '',
+                ];
+            }
+            if ($existingNode->getNodeType()->getName() != $importedNodeData['nodeType']) {
+                $changes['changes']['nodeType'] = [
+                    'type' => 'text',
+                    'propertyLabel' => 'Nodetype',
+                    'original' => $existingNode->getNodeType()->getName(),
+                    'changed' => $importedNodeData['nodeType'],
+                    'diff' => '',
+                ];
+            }
+            if ($existingNode->isHidden() != $importedNodeData['hidden']) {
+                $changes['changes']['hidden'] = [
+                    'type' => 'text',
+                    'propertyLabel' => 'Hidden',
+                    'original' => $existingNode->isHidden(),
+                    'changed' => $importedNodeData['hidden'],
+                    'diff' => '',
+                ];
+            }
+        }
 
         foreach ($existingNode->getProperties() as $propertyName => $originalPropertyValue) {
             $changedPropertyValue = $importedProperties[$propertyName] ?? '';
@@ -612,7 +644,7 @@ class RevisionService
                 }
             }
 
-            $changes['contentChanges'][$propertyName] = [
+            $changes['changes'][$propertyName] = [
                 'type' => $type,
                 'propertyLabel' => $this->getPropertyLabel($propertyName, $existingNode->getNodeType()),
                 'original' => $originalPropertyValue,

@@ -69,7 +69,7 @@ type NodeChanges = {
             icon: string;
         };
     };
-    contentChanges: Record<NodePropertyName, NodeChange>;
+    changes: Record<NodePropertyName, NodeChange>;
 };
 
 type ChangeList = {

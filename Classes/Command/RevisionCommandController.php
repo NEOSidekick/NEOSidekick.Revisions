@@ -162,8 +162,8 @@ class RevisionCommandController extends CommandController
                     json_encode($nodeChange['node']['dimensions']),
                     $nodeChange['node']['label'],
                     implode("\n", array_map(static function ($property) use ($nodeChange) {
-                        return sprintf("%s:\n%s", $property, $nodeChange['contentChanges'][$property]['diff']);
-                    }, array_keys($nodeChange['contentChanges'] ?? []))),
+                        return sprintf("%s:\n%s", $property, $nodeChange['changes'][$property]['diff']);
+                    }, array_keys($nodeChange['changes'] ?? []))),
                 ];
             }
             return $carry;
