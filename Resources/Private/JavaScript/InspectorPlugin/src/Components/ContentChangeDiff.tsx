@@ -42,8 +42,6 @@ const ContentChangeDiff: React.FC<ContentChangeDiffProps> = ({ nodeChanges, cont
         );
     }, [node.dimensions]);
 
-    console.log(dimensionLabel, node.label);
-
     return (
         <div
             style={{
