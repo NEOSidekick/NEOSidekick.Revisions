@@ -212,7 +212,7 @@ const RevisionList: React.FC<Props> = ({
                         {revisions.map((revision, index) => (
                             <React.Fragment key={index}>
                                 <RevisionListItem
-                                    allowApply={index > 0}
+                                    allowApply={index > 0 && !revision.isEmpty}
                                     revision={revision}
                                     translate={translate}
                                     showDeleteButton={frontendConfiguration.showDeleteButton}

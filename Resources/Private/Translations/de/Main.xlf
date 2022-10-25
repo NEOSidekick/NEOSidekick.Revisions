@@ -49,6 +49,10 @@
                 <source>Applied revision {revision}</source>
                 <target>Angewandte Revision {revision}</target>
             </trans-unit>
+            <trans-unit id="action.apply.disabled.title">
+                <source>This revision cannot be applied</source>
+                <target>Diese Änderung kann nicht angewendet werden</target>
+            </trans-unit>
 
             <trans-unit id="action.apply.title">
                 <source>Apply revision {revisionDate} by {creator}</source>

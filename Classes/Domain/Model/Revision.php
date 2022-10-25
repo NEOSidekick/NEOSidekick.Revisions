@@ -130,4 +130,11 @@ class Revision
         $this->label = $label;
     }
 
+    public function isEmpty(): bool
+    {
+        $isEmpty = empty(stream_get_contents($this->content));
+        rewind($this->content);
+        return $isEmpty;
+    }
+
 }

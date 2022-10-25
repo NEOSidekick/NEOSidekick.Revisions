@@ -4,4 +4,5 @@ export default interface Revision {
     label: string;
     nodeIdentifier: string;
     identifier: string;
+    isEmpty: boolean;
 }

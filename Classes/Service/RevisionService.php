@@ -145,16 +145,20 @@ class RevisionService
         $this->revisionRepository->update($revision);
     }
 
-    protected function createRevisionInternal(NodeInterface $node, string $label = null): ?Revision
+    protected function createRevisionInternal(NodeInterface $node, string $label = null, bool $empty = false): ?Revision
     {
-        $xmlWriter = $this->nodeExportService->export($node->getPath());
+        $content = '';
+        if (!$empty) {
+            $xmlWriter = $this->nodeExportService->export($node->getPath());
+            $content = $xmlWriter->flush();
+        }
         $creator = $this->securityContext->canBeInitialized() ? $this->securityContext->getAccount() : null;
         $enableCompression = $this->settings['compression']['enabled'] ?? true;
 
         $revision = new Revision(
             $node->getIdentifier(),
             $creator ? $creator->getAccountIdentifier() : 'CLI',
-            $xmlWriter->flush(),
+            $content,
             $label,
             $enableCompression
         );
@@ -231,7 +235,8 @@ class RevisionService
                         null,
                         'Main',
                         'CodeQ.Revisions'
-                    )
+                    ),
+                    true
                 );
             }
 
