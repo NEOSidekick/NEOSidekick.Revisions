@@ -158,6 +158,10 @@
                 <source>New</source>
                 <target>Neu</target>
             </trans-unit>
+            <trans-unit id="diff.empty">
+                <source>No changes have been found</source>
+                <target>Es wurden keine Änderungen festgestellt</target>
+            </trans-unit>
         </body>
     </file>
 </xliff>

@@ -64,7 +64,7 @@ const RevisionDiff: React.FC<RevisionDiffProps> = ({
                 <div>
                     <Icon icon="spinner" spin color="primaryBlue" /> Loading …
                 </div>
-            ) : changes ? (
+            ) : changes && Object.keys(changes).length > 0 ? (
                 Object.keys(changes).map((nodeIdentifier) => Object.keys(changes[nodeIdentifier]).map((dimensionHash) => (
                     <div key={nodeIdentifier} style={{ marginBottom: '1rem' }}>
                         <ErrorBoundary
@@ -79,13 +79,17 @@ const RevisionDiff: React.FC<RevisionDiffProps> = ({
                     </div>
                 ))
             )) : (
-                <p>{message}</p>
+                <p>{message ? message : translate('diff.empty', 'No changes have been found')}</p>
             )}
             <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'space-between' }}>
                 <Button style="warn" onClick={onClose}>
                     {translate('action.close')}
                 </Button>
-                <Button style="success" onClick={() => applyRevision(revision)} disabled={isLoading}>
+                <Button
+                    style="success"
+                    onClick={() => applyRevision(revision)}
+                    disabled={isLoading || Object.keys(changes).length === 0}
+                >
                     <Icon icon="check" /> {translate('action.apply')}
                 </Button>
             </div>

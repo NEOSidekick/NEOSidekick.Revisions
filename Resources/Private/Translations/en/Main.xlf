@@ -121,6 +121,9 @@
             <trans-unit id="diff.new">
                 <source>New</source>
             </trans-unit>
+            <trans-unit id="diff.empty">
+                <source>No changes have been found</source>
+            </trans-unit>
         </body>
     </file>
 </xliff>
