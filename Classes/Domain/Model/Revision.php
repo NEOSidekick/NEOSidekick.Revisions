@@ -52,18 +52,24 @@ class Revision
     protected $label;
 
     /**
+     * @var bool
+     */
+    protected $moved = false;
+
+    /**
      * @Flow\Inject
      * @var PersistenceManagerInterface
      */
     protected $persistenceManager;
 
-    public function __construct(string $nodeIdentifier, string $creator, string $content, string $label = null, bool $compress = true)
+    public function __construct(string $nodeIdentifier, string $creator, string $content, string $label = null, bool $compress = true, bool $moved = false)
     {
         $this->creationDateTime = new Now();
         $this->creator = $creator;
         $this->nodeIdentifier = $nodeIdentifier;
         $this->content = $compress ? $this->compress($content) : $content;
         $this->label = $label;
+        $this->moved = $moved;
     }
 
     protected function compress(string $content): string
@@ -135,6 +141,11 @@ class Revision
         $isEmpty = empty(stream_get_contents($this->content));
         rewind($this->content);
         return $isEmpty;
+    }
+
+    public function isMoved(): bool
+    {
+        return $this->moved;
     }
 
 }

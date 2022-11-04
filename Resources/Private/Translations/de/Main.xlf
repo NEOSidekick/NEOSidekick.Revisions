@@ -16,11 +16,15 @@
             </trans-unit>
             <trans-unit id="header.creator">
                 <source>Creator</source>
-                <target>creator</target>
+                <target>Erstellt von</target>
             </trans-unit>
             <trans-unit id="header.revision">
                 <source>Revision</source>
                 <target>Revision</target>
+            </trans-unit>
+            <trans-unit id="header.moved">
+                <source>Moved</source>
+                <target>Verschoben</target>
             </trans-unit>
 
             <trans-unit id="list.noRevisionsFound">
@@ -31,6 +35,10 @@
             <trans-unit id="revision.label">
                 <source>By {creator}</source>
                 <target>Von {creator}</target>
+            </trans-unit>
+            <trans-unit id="revision.isMoved">
+                <source>Document was moved</source>
+                <target>Dokument wurde verschoben</target>
             </trans-unit>
             <trans-unit id="tooltip.revisionLabel">
                 <source>Created on {revisionDate} by {creator}</source>
@@ -165,6 +173,10 @@
             <trans-unit id="diff.empty">
                 <source>No changes have been found</source>
                 <target>Es wurden keine Änderungen festgestellt</target>
+            </trans-unit>
+            <trans-unit id="diff.moved">
+                <source>Note: the document was moved in this revision, but will not be moved back to its original location when applied.</source>
+                <target>Hinweis: Das Dokument wurde in dieser Revision verschoben, wird aber bei der Anwendung nicht an seinen ursprünglichen Ort zurückgeschoben.</target>
             </trans-unit>
         </body>
     </file>

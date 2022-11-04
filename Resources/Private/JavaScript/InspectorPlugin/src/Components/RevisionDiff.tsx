@@ -57,9 +57,15 @@ const RevisionDiff: React.FC<RevisionDiffProps> = ({
 
     return (
         <div style={{ padding: '1rem', height: 'inherit', display: 'flex', flexDirection: 'column' }}>
-            <h1 style={{ marginBottom: '2rem', fontSize: '1.5em' }}>
+            <h1 style={{ marginBottom: '2rem', fontSize: '1.5em', lineHeight: 1.3 }}>
                 {translate('diff.header', 'The revision contains the following changes', { version, date: formatRevisionDate(revision) })}
             </h1>
+            {revision.isMoved && (
+                <div style={{ marginBottom: '2rem', fontWeight: 'bold' }}>
+                    <Icon icon="exclamation-triangle" style={{ marginRight: '0.5rem', color: '#ff8700' }} />
+                    {translate('diff.moved', 'The document was moved to another location.')}
+                </div>
+            )}
             <div style={{ overflow: 'auto' }}>
                 {isLoading ? (
                     <div>

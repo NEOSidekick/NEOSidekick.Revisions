@@ -17,6 +17,9 @@
             <trans-unit id="header.revision">
                 <source>Revision</source>
             </trans-unit>
+            <trans-unit id="header.moved">
+                <source>Moved</source>
+            </trans-unit>
 
             <trans-unit id="list.noRevisionsFound">
                 <source>No revisions found</source>
@@ -24,6 +27,9 @@
 
             <trans-unit id="revision.label">
                 <source>By {creator}</source>
+            </trans-unit>
+            <trans-unit id="revision.isMoved">
+                <source>Document was moved</source>
             </trans-unit>
             <trans-unit id="tooltip.revisionLabel">
                 <source>Created on {revisionDate} by {creator}</source>
@@ -126,6 +132,9 @@
             </trans-unit>
             <trans-unit id="diff.empty">
                 <source>No changes have been found</source>
+            </trans-unit>
+            <trans-unit id="diff.moved">
+                <source>Note: the document was moved in this revision, but will not be moved back to its original location when applied.</source>
             </trans-unit>
         </body>
     </file>

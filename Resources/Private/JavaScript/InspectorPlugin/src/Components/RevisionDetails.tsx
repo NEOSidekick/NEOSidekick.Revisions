@@ -21,28 +21,38 @@ const RevisionDetails: React.FC<Props> = ({ revision, onUpdate, onClose, transla
             <table style={{ width: '100%' }}>
                 <tbody>
                     <tr>
-                        <td>
+                        <td style={{ verticalAlign: 'top' }}>
                             <strong>{translate('header.revision')}</strong>
                         </td>
                         <td>{formatRevisionDate(revision)}</td>
                     </tr>
                     <tr>
-                        <td>
+                        <td style={{ verticalAlign: 'top' }}>
                             <strong>{translate('header.creator')}</strong>
                         </td>
                         <td>{revision.creator}</td>
                     </tr>
+                    {revision.isMoved && (
+                        <tr>
+                            <td style={{ verticalAlign: 'top' }}>
+                                <strong>{translate('header.moved')}</strong>
+                            </td>
+                            <td>{translate('revision.isMoved')}</td>
+                        </tr>
+                    )}
                     <tr>
-                        <td>
+                        <td style={{ verticalAlign: 'top' }}>
                             <strong>{translate('header.identifier')}</strong>
                         </td>
                         <td>{revision.identifier}</td>
                     </tr>
                     <tr>
-                        <td>
+                        <td colSpan={2}>
                             <strong>{translate('header.label')}</strong>
                         </td>
-                        <td>
+                    </tr>
+                    <tr>
+                        <td colSpan={2}>
                             <TextInput defaultValue={label} onChange={setLabel} />
                         </td>
                     </tr>

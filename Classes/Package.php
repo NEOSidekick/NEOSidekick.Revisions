@@ -14,6 +14,7 @@ namespace CodeQ\Revisions;
  */
 
 use CodeQ\Revisions\Service\RevisionService;
+use Neos\ContentRepository\Domain\Model\Workspace;
 use Neos\Flow\Core\Bootstrap;
 use Neos\Flow\Package\Package as BasePackage;
 use Neos\Neos\Service\PublishingService;
@@ -27,7 +28,9 @@ class Package extends BasePackage
             PublishingService::class, 'nodePublished',
             RevisionService::class, 'registerNodeChange'
         );
-
-        // TODO: Delete revisions when a node is removed in live workspace
+        $dispatcher->connect(
+            Workspace::class, 'beforeNodePublishing',
+            RevisionService::class, 'registerNodeBeforePublishing'
+        );
     }
 }

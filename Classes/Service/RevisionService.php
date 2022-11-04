@@ -7,10 +7,12 @@ use Neos\ContentRepository\Domain\Model\NodeData;
 use Neos\ContentRepository\Domain\Model\NodeInterface;
 use Neos\ContentRepository\Domain\Model\NodeType;
 use Neos\ContentRepository\Domain\Model\Workspace;
+use Neos\ContentRepository\Domain\Repository\NodeDataRepository;
 use Neos\ContentRepository\Domain\Service\Context as ContentContext;
 use Neos\ContentRepository\Domain\Service\ContextFactoryInterface;
 use Neos\ContentRepository\Domain\Service\NodeTypeManager;
 use Neos\ContentRepository\Exception\ImportException;
+use Neos\ContentRepository\Exception\NodeTypeNotFoundException;
 use Neos\ContentRepository\Utility;
 use Neos\Diff\Diff;
 use Neos\Diff\Renderer\AbstractRenderer;
@@ -72,6 +74,11 @@ class RevisionService
     protected static $nodesForRevisions = [];
 
     /**
+     * @var array<string, bool>
+     */
+    protected static $movedNodes = [];
+
+    /**
      * @Flow\Inject
      * @var LoggerInterface
      */
@@ -130,6 +137,12 @@ class RevisionService
      */
     protected $nodeTypeManager;
 
+    /**
+     * @Flow\Inject
+     * @var NodeDataRepository
+     */
+    protected $nodeDataRepository;
+
     public function createRevision(NodeInterface $node, string $label = null): ?Revision
     {
         return $this->createRevisionInternal($node, $label);
@@ -160,7 +173,8 @@ class RevisionService
             $creator ? $creator->getAccountIdentifier() : 'CLI',
             $content,
             $label,
-            $enableCompression
+            $enableCompression,
+            array_key_exists($node->getIdentifier(), self::$movedNodes)
         );
 
         try {
@@ -252,7 +266,7 @@ class RevisionService
 
     /**
      * @return array<string, array> List of changes by node identifier
-     * @throws IllegalObjectTypeException
+     * @throws IllegalObjectTypeException|NodeTypeNotFoundException
      */
     public function compareRevision(Revision $revision, string $parentPath, AbstractRenderer $renderer): array
     {
@@ -468,19 +482,35 @@ class RevisionService
 
     public function registerNodeChange(NodeInterface $node, Workspace $targetWorkspace = null): void
     {
+        // We only create revisions when nodes are published to the live workspace
         if (!$targetWorkspace || $targetWorkspace->getName() !== 'live') {
             return;
         }
 
         // Find the closest document node and store it.
-        // For each node a revisions will be created at the end of the request to prevent duplicates.
+        // For each document node a revision will be created at the end of the request to prevent duplicates.
         $documentNode = $node;
         while ($documentNode && !$documentNode->getNodeType()->isOfType('Neos.Neos:Document')) {
             $documentNode = $documentNode->getParent();
         }
 
-        if ($documentNode->getNodeType()->isOfType('Neos.Neos:Document')) {
+        if ($documentNode && $documentNode->getNodeType()->isOfType('Neos.Neos:Document')) {
             self::$nodesForRevisions[$documentNode->getIdentifier()] = $documentNode;
+        }
+    }
+
+    public function registerNodeBeforePublishing(NodeInterface $node, Workspace $targetWorkspace): void {
+        if ($targetWorkspace->getName() !== 'live' || !$node->getNodeType()->isOfType('Neos.Neos:Document')) {
+            return;
+        }
+        $nodeInLiveWorkspace = $this->nodeDataRepository->findOneByIdentifier($node->getIdentifier(), $targetWorkspace);
+        if (!$nodeInLiveWorkspace) {
+            // TODO: Check here whether the node was removed and remove its revisions during shutdown
+            return;
+        }
+        if ($node->getPath() !== $nodeInLiveWorkspace->getPath()) {
+            self::$movedNodes[$node->getIdentifier()] = true;
+            $this->logger->debug(sprintf('Node "%s" will be moved from "%s" to "%s"', $node->getIdentifier(), $nodeInLiveWorkspace->getPath(), $node->getPath()));
         }
     }
 
@@ -502,16 +532,18 @@ class RevisionService
             return;
         }
 
-        $context = $this->contextFactory->create();
-
-        foreach (self::$nodesForRevisions as $node) {
+        foreach (self::$nodesForRevisions as $identifier => $node) {
             // Make sure we have fresh nodedata from CR
-            $nodeId = $node->getIdentifier();
             $node->getContext()->getFirstLevelNodeCache()->flush();
-            $nodeToUse = $context->getNodeByIdentifier($nodeId);
+            $nodeToUse = $node->getContext()->getNodeByIdentifier($identifier);
 
             if ($nodeToUse) {
-                $this->createRevision($nodeToUse);
+                if ($nodeToUse->isRemoved()) {
+                    $this->logger->info(sprintf('Removing revisions for deleted node %s', $nodeToUse->getContextPath()));
+                    // TODO: Remove revisions
+                } else {
+                    $this->createRevision($nodeToUse);
+                }
             }
         }
         $this->persistenceManager->persistAll();

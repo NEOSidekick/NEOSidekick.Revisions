@@ -5,4 +5,5 @@ export default interface Revision {
     nodeIdentifier: string;
     identifier: string;
     isEmpty: boolean;
+    isMoved: boolean;
 }

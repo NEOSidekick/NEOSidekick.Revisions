@@ -58,6 +58,7 @@ class RevisionsController extends ActionController
                 'creator' => $revision->getCreator(),
                 'creationDateTime' => $revision->getCreationDateTime(),
                 'isEmpty' => $revision->isEmpty(),
+                'isMoved' => $revision->isMoved(),
             ];
         }, $this->revisionService->getRevisions($node));
 
