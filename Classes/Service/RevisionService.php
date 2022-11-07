@@ -594,7 +594,7 @@ class RevisionService
             'node' => [
                 'identifier' => $existingNode->getIdentifier(),
                 'label' => $existingNode->getLabel(),
-                'lastModificationDateTime' => $existingNode->getLastPublicationDateTime(),
+                'lastModificationDateTime' => $existingNode->getLastPublicationDateTime() ?? $existingNode->getCreationDateTime(),
                 'dimensions' => $existingNode->getDimensions(),
                 'nodeType' => [
                     'name' => $existingNode->getNodeType()->getName(),
