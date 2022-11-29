@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Icon } from '@neos-project/react-ui-components';
 
 import { formatChangeDate } from '../Helpers/format';
@@ -6,6 +6,8 @@ import AssetPropertyDiff from './Diff/AssetPropertyDiff';
 import ImagePropertyDiff from './Diff/ImagePropertyDiff';
 import DateTimePropertyDiff from './Diff/DateTimePropertyDiff';
 import TextPropertyDiff from './Diff/TextPropertyDiff';
+import NodePropertyDiff from './Diff/NodePropertyDiff';
+import FallbackPropertyDiff from './Diff/FallbackPropertyDiff';
 
 type ContentChangeDiffProps = {
     nodeChanges: NodeChanges;
@@ -42,6 +44,22 @@ const ContentChangeDiff: React.FC<ContentChangeDiffProps> = ({ nodeChanges, cont
         );
     }, [node.dimensions]);
 
+    const renderChange = useCallback(({type, original, changed, diff}: NodeChange) => {
+        switch (type) {
+            case 'text':
+                return <TextPropertyDiff diff={diff} />
+            case 'image':
+                return <ImagePropertyDiff original={original as ImageProperty} changed={changed as ImageProperty} />
+            case 'asset':
+                return <AssetPropertyDiff original={original as AssetProperty} changed={changed as AssetProperty} />
+            case 'datetime':
+                return <DateTimePropertyDiff original={original as string} changed={changed as string} />
+            case 'node':
+                return <NodePropertyDiff original={original as string} changed={changed as string} />
+        }
+        return <FallbackPropertyDiff original={original as string} changed={changed as string} />
+    }, []);
+
     return (
         <div
             style={{
@@ -72,13 +90,13 @@ const ContentChangeDiff: React.FC<ContentChangeDiffProps> = ({ nodeChanges, cont
                 </span>
             </div>
             {Object.keys(changes).map((propertyName) => {
-                const { propertyLabel, type, diff, original, changed } = changes[propertyName];
+                const change = changes[propertyName];
                 return (
                     <div
                         key={propertyName}
                         style={{ borderTop: '1px solid #323232', marginTop: '1rem', padding: '1rem' }}
                     >
-                        <div>{translate('diff.propertyLabel', propertyLabel, { propertyLabel })}</div>
+                        <div>{translate('diff.propertyLabel', change.propertyLabel, { propertyLabel: change.propertyLabel })}</div>
                         <table style={{ width: '100%', borderSpacing: 0 }}>
                             <thead>
                                 <tr>
@@ -87,10 +105,7 @@ const ContentChangeDiff: React.FC<ContentChangeDiffProps> = ({ nodeChanges, cont
                                 </tr>
                             </thead>
                             <tbody>
-                                {type === 'text' && <TextPropertyDiff diff={diff} />}
-                                {type === 'image' && <ImagePropertyDiff original={original} changed={changed} />}
-                                {type === 'asset' && <AssetPropertyDiff original={original} changed={changed} />}
-                                {type === 'datetime' && <DateTimePropertyDiff original={original} changed={changed} />}
+                                {renderChange(change)}
                             </tbody>
                         </table>
                     </div>

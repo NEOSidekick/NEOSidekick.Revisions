@@ -45,7 +45,7 @@ type TextDiff = {
 }[][];
 
 type NodeChange = {
-    type: 'text' | 'asset' | 'image' | 'datetime' | 'nodeAdded' | 'nodeRemoved';
+    type: 'text' | 'asset' | 'image' | 'datetime' | 'node' | 'array' | 'nodeAdded' | 'nodeRemoved';
     propertyLabel: string;
     original: NodePropertyValue;
     changed: NodePropertyValue;

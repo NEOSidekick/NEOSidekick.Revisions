@@ -679,7 +679,16 @@ class RevisionService
                 if ($changed) {
                     $type = 'datetime';
                 }
+            } elseif ($originalPropertyValue instanceof NodeInterface || $changedPropertyValue instanceof NodeInterface) {
+                $type = 'node';
+                $originalPropertyValue = $originalPropertyValue instanceof NodeInterface ? $originalPropertyValue->getLabel() : '';
+                $changedPropertyValue = $changedPropertyValue instanceof NodeInterface ? $changedPropertyValue->getLabel() : '';
+            } else if (is_array($originalPropertyValue) || is_array($changedPropertyValue)) {
+                $type = 'array';
             }
+
+            $originalPropertyValue = $this->serializeValue($originalPropertyValue);
+            $changedPropertyValue = $this->serializeValue($changedPropertyValue);
 
             $changes['changes'][$propertyName] = [
                 'type' => $type,
@@ -704,6 +713,26 @@ class RevisionService
             }
         }
         return null;
+    }
+
+    /**
+     * Returns a usable label/value for the given property for the diff in the UI
+     */
+    protected function serializeValue($propertyValue): string
+    {
+        if (is_string($propertyValue)) {
+            return $propertyValue;
+        }
+        if (is_array($propertyValue)) {
+            $propertyValue = array_map(function ($value) {
+                return $this->serializeValue($value);
+            } , $propertyValue);
+            return json_encode($propertyValue);
+        }
+        if ($propertyValue instanceof NodeInterface) {
+            return $propertyValue->getLabel();
+        }
+        json_encode($propertyValue);
     }
 
 }
