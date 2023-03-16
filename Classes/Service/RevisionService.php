@@ -732,7 +732,7 @@ class RevisionService
         if ($propertyValue instanceof NodeInterface) {
             return $propertyValue->getLabel();
         }
-        json_encode($propertyValue);
+        return json_encode($propertyValue);
     }
 
 }
