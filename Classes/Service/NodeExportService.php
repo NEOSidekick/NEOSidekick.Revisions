@@ -14,7 +14,6 @@ namespace CodeQ\Revisions\Service;
  */
 
 use Neos\ContentRepository\Domain\Model\NodeData;
-use Neos\ContentRepository\Domain\Model\Workspace;
 use Neos\ContentRepository\Domain\Repository\WorkspaceRepository;
 use Neos\ContentRepository\Domain\Service\ImportExport\ImportExportPropertyMappingConfiguration;
 use Neos\Flow\Annotations as Flow;
@@ -127,6 +126,11 @@ class NodeExportService extends \Neos\ContentRepository\Domain\Service\ImportExp
         $this->handleExceptionsDuringExport();
 
         return $this->xmlWriter;
+    }
+
+    protected function handleExceptionsDuringExport(): void
+    {
+        // Noop, we ignore the issue and the errors were already logged before
     }
 
 }
