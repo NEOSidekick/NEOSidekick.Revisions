@@ -9,7 +9,7 @@ const AssetPropertyDiff: React.FC<DiffProps> = ({ original, changed }) => {
     return (
         <tr>
             <td>
-                {original && (
+                {original?.resource && (
                     <del>
                         <a href={original.resource.uri} target="_blank">
                             {original.resource.filename}
@@ -18,7 +18,7 @@ const AssetPropertyDiff: React.FC<DiffProps> = ({ original, changed }) => {
                 )}
             </td>
             <td>
-                {changed && (
+                {changed?.resource && (
                     <ins>
                         <a href={changed.resource.uri} target="_blank">
                             {changed.resource.filename}

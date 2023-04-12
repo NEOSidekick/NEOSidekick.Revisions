@@ -5,7 +5,7 @@ type DiffProps = {
 };
 
 const TextPropertyDiff: React.FC<DiffProps> = ({ diff }) => {
-    return (
+    return Array.isArray(diff) ? (
         <>
             {diff.map((blocks) =>
                 blocks.map((block, index) => (
@@ -26,6 +26,10 @@ const TextPropertyDiff: React.FC<DiffProps> = ({ diff }) => {
                 ))
             )}
         </>
+    ) : (
+        <tr>
+            <td>Error: Could not parse diff</td>
+        </tr>
     );
 };
 

@@ -10,10 +10,10 @@ const DateTimePropertyDiff: React.FC<DiffProps> = ({ original, changed }) => {
     return (
         <tr>
             <td>
-                <time>{formatChangeDate(original)}</time>
+                <time>{original ? formatChangeDate(original) : '-'}</time>
             </td>
             <td>
-                <time>{formatChangeDate(changed)}</time>
+                <time>{changed ? formatChangeDate(changed) : '-'}</time>
             </td>
         </tr>
     );
