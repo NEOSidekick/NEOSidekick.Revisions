@@ -14,6 +14,7 @@ use Neos\ContentRepository\Domain\Service\NodeTypeManager;
 use Neos\ContentRepository\Exception\ImportException;
 use Neos\ContentRepository\Exception\NodeTypeNotFoundException;
 use Neos\ContentRepository\Utility;
+use Neos\ContentRepository\Validation\Validator\NodeIdentifierValidator;
 use Neos\Diff\Diff;
 use Neos\Diff\Renderer\AbstractRenderer;
 use Neos\Eel\FlowQuery\FlowQuery;
@@ -639,15 +640,25 @@ class RevisionService
         foreach ($existingNode->getProperties() as $propertyName => $originalPropertyValue) {
             $changedPropertyValue = $importedProperties[$propertyName] ?? '';
             $diff = '';
-            $type = '';
+            $type = 'text';
 
             if ($changedPropertyValue === $originalPropertyValue && !$existingNode->isRemoved()) {
                 continue;
             }
 
+            $originalType = gettype($originalPropertyValue);
+            $changedType = gettype($changedPropertyValue);
+
+            $serializedOriginalValue = $this->serializeValue($originalPropertyValue, $existingNode);
+            $serializedChangedValue = $this->serializeValue($changedPropertyValue, $existingNode);
+
             if (!is_object($originalPropertyValue) && !is_object($changedPropertyValue)) {
-                $originalSlimmedDownContent = $this->renderSlimmedDownContent($originalPropertyValue);
-                $changedSlimmedDownContent = $existingNode->isRemoved() ? '' : $this->renderSlimmedDownContent($changedPropertyValue);
+                if (is_array($originalPropertyValue) || is_array($changedPropertyValue)) {
+                    $type = 'array';
+                }
+
+                $originalSlimmedDownContent = $this->renderSlimmedDownContent($serializedOriginalValue);
+                $changedSlimmedDownContent = $existingNode->isRemoved() ? '' : $this->renderSlimmedDownContent($serializedChangedValue);
 
                 $rawDiff = new Diff(explode("\n", $originalSlimmedDownContent), explode("\n", $changedSlimmedDownContent), ['context' => 1]);
                 $diffArray = $rawDiff->render($renderer);
@@ -657,7 +668,6 @@ class RevisionService
                 }
 
                 if ($diffArray) {
-                    $type = 'text';
                     $diff = $diffArray;
                 }
                 // The && in belows condition is on purpose as creating a thumbnail for comparison only works if actually
@@ -681,20 +691,15 @@ class RevisionService
                 }
             } elseif ($originalPropertyValue instanceof NodeInterface || $changedPropertyValue instanceof NodeInterface) {
                 $type = 'node';
-                $originalPropertyValue = $originalPropertyValue instanceof NodeInterface ? $originalPropertyValue->getLabel() : '';
-                $changedPropertyValue = $changedPropertyValue instanceof NodeInterface ? $changedPropertyValue->getLabel() : '';
-            } else if (is_array($originalPropertyValue) || is_array($changedPropertyValue)) {
-                $type = 'array';
             }
-
-            $originalPropertyValue = $this->serializeValue($originalPropertyValue);
-            $changedPropertyValue = $this->serializeValue($changedPropertyValue);
 
             $changes['changes'][$propertyName] = [
                 'type' => $type,
                 'propertyLabel' => $this->getPropertyLabel($propertyName, $existingNode->getNodeType()),
-                'original' => $originalPropertyValue,
-                'changed' => $changedPropertyValue,
+                'original' => $serializedOriginalValue,
+                'changed' => $serializedChangedValue,
+                'originalType' => $originalType,
+                'changedType' => $changedType,
                 'diff' => $diff,
             ];
         }
@@ -718,20 +723,33 @@ class RevisionService
     /**
      * Returns a usable label/value for the given property for the diff in the UI
      */
-    protected function serializeValue($propertyValue): string
+    protected function serializeValue($propertyValue, NodeInterface $contextNode): string
     {
         if (is_string($propertyValue)) {
+            // Convert node id to node if necessary
+            if (preg_match(NodeIdentifierValidator::PATTERN_MATCH_NODE_IDENTIFIER, $propertyValue) !== 0) {
+                $propertyValue = $contextNode->getContext()->getNodeByIdentifier($propertyValue);
+                if ($propertyValue) {
+                    return $propertyValue->getLabel();
+                }
+            }
             return $propertyValue;
         }
-        if (is_array($propertyValue)) {
-            $propertyValue = array_map(function ($value) {
-                return $this->serializeValue($value);
-            } , $propertyValue);
-            return json_encode($propertyValue);
+
+        if (is_bool($propertyValue)) {
+            return $propertyValue ? 'true' : 'false';
         }
+
         if ($propertyValue instanceof NodeInterface) {
             return $propertyValue->getLabel();
         }
+
+        if (is_array($propertyValue)) {
+            $propertyValue = array_map(function ($value) use ($contextNode) {
+                return $this->serializeValue($value, $contextNode);
+            } , $propertyValue);
+        }
+
         return json_encode($propertyValue);
     }
 
