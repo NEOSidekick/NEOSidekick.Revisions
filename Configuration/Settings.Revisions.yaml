@@ -1,5 +1,6 @@
 CodeQ:
   Revisions:
+    enabled: true
     compression:
       enabled: false # Enables compression of revision xml content in the database
     revisions:
