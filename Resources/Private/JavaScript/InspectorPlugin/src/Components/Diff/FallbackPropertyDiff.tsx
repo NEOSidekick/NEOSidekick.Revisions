@@ -9,10 +9,14 @@ const FallbackPropertyDiff: React.FC<DiffProps> = ({ original, changed }) => {
     return (
         <tr>
             <td>
-                {original}
+                <div style={{ overflow: 'auto', maxWidth: 'calc(100% - 1rem)' }}>
+                    <pre style={{ display: 'table', width: '100%', tableLayout: 'fixed' }}>{original}</pre>
+                </div>
             </td>
             <td>
-                {changed}
+                <div style={{ overflow: 'auto' }}>
+                    <pre style={{ display: 'table', width: '100%', tableLayout: 'fixed' }}>{changed}</pre>
+                </div>
             </td>
         </tr>
     );

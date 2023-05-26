@@ -654,6 +654,10 @@ class RevisionService
             $serializedOriginalValue = $this->serializeValue($originalPropertyValue, $existingNode);
             $serializedChangedValue = $this->serializeValue($changedPropertyValue, $existingNode);
 
+            if ($serializedOriginalValue === $serializedChangedValue) {
+                continue;
+            }
+
             if (!is_object($originalPropertyValue) && !is_object($changedPropertyValue)) {
                 if (is_array($originalPropertyValue) || is_array($changedPropertyValue)) {
                     $type = 'array';
@@ -727,23 +731,17 @@ class RevisionService
      */
     protected function serializeValue($propertyValue, NodeInterface $contextNode): string
     {
-        if (is_string($propertyValue)) {
-            // Convert node id to node if necessary
-            if (preg_match(NodeIdentifierValidator::PATTERN_MATCH_NODE_IDENTIFIER, $propertyValue) !== 0) {
-                $propertyValue = $contextNode->getContext()->getNodeByIdentifier($propertyValue);
-                if ($propertyValue) {
-                    return $propertyValue->getLabel();
-                }
-            }
-            return $propertyValue;
+        // Convert node id to node if necessary
+        if (is_string($propertyValue) && preg_match(NodeIdentifierValidator::PATTERN_MATCH_NODE_IDENTIFIER, $propertyValue) !== 0) {
+            $propertyValue = $contextNode->getContext()->getNodeByIdentifier($propertyValue);
+        }
+
+        if ($propertyValue instanceof NodeInterface) {
+            return $propertyValue->getLabel() . ' (' . $propertyValue->getIdentifier() . ')';
         }
 
         if (is_bool($propertyValue)) {
             return $propertyValue ? 'true' : 'false';
-        }
-
-        if ($propertyValue instanceof NodeInterface) {
-            return $propertyValue->getLabel();
         }
 
         if (is_array($propertyValue)) {
@@ -752,7 +750,7 @@ class RevisionService
             } , $propertyValue);
         }
 
-        return json_encode($propertyValue);
+        return json_encode($propertyValue, JSON_PRETTY_PRINT);
     }
 
 }

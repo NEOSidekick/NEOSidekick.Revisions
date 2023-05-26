@@ -201,7 +201,7 @@ const RevisionList: React.FC<Props> = ({
                     isLoading={isLoading}
                 />
             ) : revisions.length ? (
-                <table style={{ width: '100%' }}>
+                <table style={{ width: '100%', maxWidth: '100%' }}>
                     <thead>
                         <tr>
                             <th style={{ textAlign: 'left' }}>{translate('header.label')}</th>
