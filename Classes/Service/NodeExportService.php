@@ -133,4 +133,22 @@ class NodeExportService extends \Neos\ContentRepository\Domain\Service\ImportExp
         // Noop, we ignore the issue and the errors were already logged before
     }
 
+    /**
+     * @inheritDoc
+     *
+     * Adds special handling for boolean properties as false values are being dropped during export (see https://github.com/code-q-web-factory/CodeQ.Revisions/issues/13)
+     */
+    protected function writeConvertedElement(array &$data, $propertyName, $elementName = null, $declaredPropertyType = null): void
+    {
+        if ($declaredPropertyType !== 'boolean') {
+            parent::writeConvertedElement($data, $propertyName, $elementName, $declaredPropertyType);
+        } else if (array_key_exists($propertyName, $data) && $data[$propertyName] !== null) {
+            $propertyValue = $data[$propertyName];
+            $this->xmlWriter->startElement($elementName ?: $propertyName);
+            $this->xmlWriter->writeAttribute('__type', gettype($propertyValue));
+            $this->xmlWriter->text($propertyValue ? '1' : '0');
+            $this->xmlWriter->endElement();
+        }
+    }
+
 }
