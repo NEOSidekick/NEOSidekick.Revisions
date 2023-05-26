@@ -277,7 +277,9 @@ class RevisionService
             return [];
         }
 
-        $context = $this->contextFactory->create();
+        $context = $this->contextFactory->create([
+            'invisibleContentShown' => true
+        ]);
         $revisionRootNode = $context->getNodeByIdentifier($revision->getNodeIdentifier());
 
         if (!$revisionRootNode) {
@@ -612,7 +614,7 @@ class RevisionService
                 $changes['changes']['lastModificationDateTime'] = [
                     'type' => 'datetime',
                     'propertyLabel' => 'Last modification date',
-                    'original' => $existingNode->getNodeData()->getLastModificationDateTime(),
+                    'original' => $existingNode->getNodeData()->getLastModificationDateTime()->format('c'),
                     'changed' => $importedNodeData['lastModificationDateTime'],
                     'diff' => '',
                 ];
@@ -630,8 +632,8 @@ class RevisionService
                 $changes['changes']['hidden'] = [
                     'type' => 'text',
                     'propertyLabel' => 'Hidden',
-                    'original' => $existingNode->isHidden(),
-                    'changed' => $importedNodeData['hidden'],
+                    'original' => json_encode($existingNode->isHidden()),
+                    'changed' => json_encode($importedNodeData['hidden']),
                     'diff' => '',
                 ];
             }
