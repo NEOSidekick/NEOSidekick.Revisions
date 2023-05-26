@@ -47,7 +47,7 @@ const ContentChangeDiff: React.FC<ContentChangeDiffProps> = ({ nodeChanges, cont
     const renderChange = useCallback(({type, original, changed, diff}: NodeChange) => {
         switch (type) {
             case 'text':
-                return <TextPropertyDiff diff={diff} />
+                return <TextPropertyDiff original={original as string} changed={changed as string} diff={diff} />
             case 'image':
                 return <ImagePropertyDiff original={original as ImageProperty} changed={changed as ImageProperty} />
             case 'asset':
