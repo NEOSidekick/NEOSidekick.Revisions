@@ -49,7 +49,7 @@ const ContentChangeDiff: React.FC<ContentChangeDiffProps> = ({ nodeChanges, cont
             case 'text':
                 return <TextPropertyDiff original={original as string} changed={changed as string} diff={diff} />
             case 'image':
-                return <ImagePropertyDiff original={original as ImageProperty} changed={changed as ImageProperty} />
+                return <ImagePropertyDiff original={original as string} changed={changed as string} />
             case 'asset':
                 return <AssetPropertyDiff original={original as AssetProperty} changed={changed as AssetProperty} />
             case 'datetime':

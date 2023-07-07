@@ -40,7 +40,15 @@ class NodeExportService extends \Neos\ContentRepository\Domain\Service\ImportExp
      */
     protected $nodeService;
 
-    public function export($startingPointNodePath = '/', $workspaceName = 'live', \XMLWriter $xmlWriter = null, $tidy = false, $endDocument = true, $resourceSavePath = null, $nodeTypeFilter = null): \XMLWriter
+    public function export(
+        $startingPointNodePath = '/',
+        $workspaceName = 'live',
+        \XMLWriter $xmlWriter = null,
+        $tidy = false,
+        $endDocument = true,
+        $resourceSavePath = 'SKIP',
+        $nodeTypeFilter = null
+    ): \XMLWriter
     {
         $this->propertyMappingConfiguration = new ImportExportPropertyMappingConfiguration($resourceSavePath);
         $this->exceptionsDuringExport = [];

@@ -27,6 +27,7 @@ use Neos\Flow\I18n\Service as I18nService;
 use Neos\Flow\I18n\Translator;
 use Neos\Flow\Persistence\Exception\IllegalObjectTypeException;
 use Neos\Flow\Persistence\PersistenceManagerInterface;
+use Neos\Flow\ResourceManagement\ResourceManager;
 use Neos\Flow\Security\Context;
 use Neos\Media\Domain\Model\AssetInterface;
 use Neos\Media\Domain\Model\ImageInterface;
@@ -143,6 +144,12 @@ class RevisionService
      * @var NodeDataRepository
      */
     protected $nodeDataRepository;
+
+    /**
+     * @Flow\Inject
+     * @var ResourceManager
+     */
+    protected $resourceManager;
 
     public function createRevision(NodeInterface $node, string $label = null): ?Revision
     {
@@ -734,6 +741,17 @@ class RevisionService
         // Convert node id to node if necessary
         if (is_string($propertyValue) && preg_match(NodeIdentifierValidator::PATTERN_MATCH_NODE_IDENTIFIER, $propertyValue) !== 0) {
             $propertyValue = $contextNode->getContext()->getNodeByIdentifier($propertyValue);
+        }
+
+        if ($propertyValue instanceof AssetInterface) {
+            $filename = $propertyValue->getResource()->getFilename();
+            $uri = $this->resourceManager->getPublicPersistentResourceUri($propertyValue->getThumbnail(300, 300)->getResource());
+
+            return json_encode([
+                'src' => $uri,
+                'alt' => $filename,
+                'title' => $propertyValue->getTitle() ?: $filename,
+            ], JSON_PRETTY_PRINT);
         }
 
         if ($propertyValue instanceof NodeInterface) {
