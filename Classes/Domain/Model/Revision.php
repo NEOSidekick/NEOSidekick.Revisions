@@ -107,9 +107,11 @@ class Revision
 
     public function getContent(): ?\XMLReader
     {
-        $content = stream_get_contents($this->content);
+        $content = is_string($this->content) ? $this->content : stream_get_contents($this->content);
         $content = strpos($content, 'BZ') === 0 ? $this->decompress($content) : $content;
-        rewind($this->content);
+        if (is_resource($this->content)) {
+            rewind($this->content);
+        }
 
         if (!$content) {
             return null;
@@ -138,8 +140,11 @@ class Revision
 
     public function isEmpty(): bool
     {
-        $isEmpty = empty(stream_get_contents($this->content));
-        rewind($this->content);
+        $content = is_string($this->content) ? $this->content : stream_get_contents($this->content);
+        $isEmpty = empty($content);
+        if (is_resource($this->content)) {
+            rewind($this->content);
+        }
         return $isEmpty;
     }
 
