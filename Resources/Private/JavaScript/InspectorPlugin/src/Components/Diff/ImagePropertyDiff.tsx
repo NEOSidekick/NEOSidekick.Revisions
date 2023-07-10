@@ -1,42 +1,22 @@
 import React from 'react';
 
 type DiffProps = {
-    original: string | null;
-    changed: string | null;
+    encodedImageData: string | null;
 };
 
-const ImagePropertyDiff: React.FC<DiffProps> = ({ original, changed }) => {
-    let originalImage: ImageProperty = null;
-    let changedImage: ImageProperty = null;
+const ImagePropertyDiff: React.FC<DiffProps> = ({ encodedImageData }) => {
+    let imageData: AssetProperty = null;
 
-    if (original) {
+    if (encodedImageData) {
         try {
-            originalImage = JSON.parse(original);
-        } catch (e) {}
-    }
-    if (changed) {
-        try {
-            changedImage = JSON.parse(changed);
+            imageData = JSON.parse(encodedImageData);
         } catch (e) {}
     }
 
-    return (
-        <tr>
-            <td>
-                {originalImage?.src ? (
-                    <img src={originalImage.src} alt={originalImage.alt} title={originalImage.title} />
-                ) : (
-                    '-'
-                )}
-            </td>
-            <td>
-                {changedImage?.src ? (
-                    <img src={changedImage.src} alt={changedImage.alt} title={changedImage.title} />
-                ) : (
-                    '-'
-                )}
-            </td>
-        </tr>
+    return imageData?.src ? (
+        <img src={imageData.src} alt={imageData.alt} title={imageData.filename} />
+    ) : (
+        <p>{encodedImageData}</p>
     );
 };
 

@@ -8,6 +8,7 @@ import DateTimePropertyDiff from './Diff/DateTimePropertyDiff';
 import TextPropertyDiff from './Diff/TextPropertyDiff';
 import NodePropertyDiff from './Diff/NodePropertyDiff';
 import FallbackPropertyDiff from './Diff/FallbackPropertyDiff';
+import VisualDiff from './Diff/VisualDiff';
 
 type ContentChangeDiffProps = {
     nodeChanges: NodeChanges;
@@ -44,20 +45,37 @@ const ContentChangeDiff: React.FC<ContentChangeDiffProps> = ({ nodeChanges, cont
         );
     }, [node.dimensions]);
 
-    const renderChange = useCallback(({type, original, changed, diff}: NodeChange) => {
+    const renderChange = useCallback((text: string, type: ChangeType) => {
         switch (type) {
             case 'text':
-                return <TextPropertyDiff original={original as string} changed={changed as string} diff={diff} />
+                return <TextPropertyDiff text={text} />;
             case 'image':
-                return <ImagePropertyDiff original={original as string} changed={changed as string} />
+                return <ImagePropertyDiff encodedImageData={text} />;
             case 'asset':
-                return <AssetPropertyDiff original={original as AssetProperty} changed={changed as AssetProperty} />
+                return <AssetPropertyDiff encodedAssetData={text} />;
             case 'datetime':
-                return <DateTimePropertyDiff original={original as string} changed={changed as string} />
+                return <DateTimePropertyDiff encodedDateTimeData={text} />;
+            case 'array':
+                try {
+                    const changes = JSON.parse(text);
+                    return (
+                        <ul>
+                            {changes.map((change: string, index: number) => {
+                                return (
+                                    <li key={index}>
+                                        <FallbackPropertyDiff value={change} />
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    );
+                } catch (e) {
+                    return <FallbackPropertyDiff value={text} />;
+                }
             case 'node':
-                return <NodePropertyDiff original={original as string} changed={changed as string} />
+                return <NodePropertyDiff value={text} />;
         }
-        return <FallbackPropertyDiff original={original as string} changed={changed as string} />
+        return <FallbackPropertyDiff value={text} />;
     }, []);
 
     return (
@@ -96,16 +114,31 @@ const ContentChangeDiff: React.FC<ContentChangeDiffProps> = ({ nodeChanges, cont
                         key={propertyName}
                         style={{ borderTop: '1px solid #323232', marginTop: '1rem', padding: '1rem' }}
                     >
-                        <div>{translate('diff.propertyLabel', change.propertyLabel, { propertyLabel: change.propertyLabel })}</div>
+                        <div>
+                            {translate('diff.propertyLabel', change.propertyLabel, {
+                                propertyLabel: change.propertyLabel,
+                            })}
+                        </div>
                         <table style={{ width: '100%', borderSpacing: 0 }}>
                             <thead>
                                 <tr>
-                                    <th style={{ textAlign: 'left' }}>{translate('diff.old')}</th>
-                                    <th style={{ textAlign: 'left' }}>{translate('diff.new')}</th>
+                                    <th style={{ textAlign: 'left', width: '50%' }}>{translate('diff.old')}</th>
+                                    <th style={{ textAlign: 'left', width: '50%' }}>{translate('diff.new')}</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {renderChange(change)}
+                                {Array.isArray(change.diff) && change.diff.length > 0 ? (
+                                    <VisualDiff diff={change.diff} />
+                                ) : (
+                                    <tr>
+                                        <td style={{ color: '#ff460d' }}>
+                                            {renderChange(change.original, change.originalType)}
+                                        </td>
+                                        <td style={{ color: '#00a338' }}>
+                                            {renderChange(change.changed, change.changedType)}
+                                        </td>
+                                    </tr>
+                                )}
                             </tbody>
                         </table>
                     </div>

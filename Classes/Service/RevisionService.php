@@ -30,7 +30,9 @@ use Neos\Flow\Persistence\PersistenceManagerInterface;
 use Neos\Flow\ResourceManagement\ResourceManager;
 use Neos\Flow\Security\Context;
 use Neos\Media\Domain\Model\AssetInterface;
+use Neos\Media\Domain\Model\Image;
 use Neos\Media\Domain\Model\ImageInterface;
+use Neos\Media\Domain\Model\ImageVariant;
 use Neos\Neos\Fusion\Cache\ContentCacheFlusher;
 use Psr\Log\LoggerInterface;
 
@@ -619,16 +621,16 @@ class RevisionService
             // Check for changes to nodes attributes
             if ($existingNode->getNodeData()->getLastModificationDateTime() != $importedNodeData['lastModificationDateTime']) {
                 $changes['changes']['lastModificationDateTime'] = [
-                    'type' => 'datetime',
                     'propertyLabel' => 'Last modification date',
                     'original' => $existingNode->getNodeData()->getLastModificationDateTime()->format('c'),
+                    'originalType' => 'datetime',
                     'changed' => $importedNodeData['lastModificationDateTime'],
+                    'changedType' => 'datetime',
                     'diff' => '',
                 ];
             }
             if ($existingNode->getNodeType()->getName() != $importedNodeData['nodeType']) {
                 $changes['changes']['nodeType'] = [
-                    'type' => 'text',
                     'propertyLabel' => 'Nodetype',
                     'original' => $existingNode->getNodeType()->getName(),
                     'changed' => $importedNodeData['nodeType'],
@@ -637,7 +639,6 @@ class RevisionService
             }
             if ($existingNode->isHidden() != $importedNodeData['hidden']) {
                 $changes['changes']['hidden'] = [
-                    'type' => 'text',
                     'propertyLabel' => 'Hidden',
                     'original' => json_encode($existingNode->isHidden()),
                     'changed' => json_encode($importedNodeData['hidden']),
@@ -649,7 +650,6 @@ class RevisionService
         foreach ($existingNode->getProperties() as $propertyName => $originalPropertyValue) {
             $changedPropertyValue = $importedProperties[$propertyName] ?? '';
             $diff = '';
-            $type = 'text';
 
             if ($changedPropertyValue === $originalPropertyValue && !$existingNode->isRemoved()) {
                 continue;
@@ -665,11 +665,7 @@ class RevisionService
                 continue;
             }
 
-            if (!is_object($originalPropertyValue) && !is_object($changedPropertyValue)) {
-                if (is_array($originalPropertyValue) || is_array($changedPropertyValue)) {
-                    $type = 'array';
-                }
-
+            if (is_string($originalPropertyValue) && is_string($changedPropertyValue)) {
                 $originalSlimmedDownContent = $this->renderSlimmedDownContent($serializedOriginalValue);
                 $changedSlimmedDownContent = $existingNode->isRemoved() ? '' : $this->renderSlimmedDownContent($serializedChangedValue);
 
@@ -685,29 +681,12 @@ class RevisionService
                 }
                 // The && in belows condition is on purpose as creating a thumbnail for comparison only works if actually
                 // BOTH are ImageInterface (or NULL).
-            } elseif (
-                ($originalPropertyValue instanceof ImageInterface || $originalPropertyValue === null)
-                && ($changedPropertyValue instanceof ImageInterface || $changedPropertyValue === null)
-            ) {
-                $type = 'image';
-            } elseif ($originalPropertyValue instanceof AssetInterface || $changedPropertyValue instanceof AssetInterface) {
-                $type = 'asset';
-            } elseif ($originalPropertyValue instanceof \DateTime || $changedPropertyValue instanceof \DateTime) {
-                $changed = false;
-                if (!$changedPropertyValue instanceof \DateTime || !$originalPropertyValue instanceof \DateTime) {
-                    $changed = true;
-                } elseif ($changedPropertyValue->getTimestamp() !== $originalPropertyValue->getTimestamp()) {
-                    $changed = true;
-                }
-                if ($changed) {
-                    $type = 'datetime';
-                }
-            } elseif ($originalPropertyValue instanceof NodeInterface || $changedPropertyValue instanceof NodeInterface) {
-                $type = 'node';
+            } else {
+                $originalType = $this->resolveChangeType($originalPropertyValue);
+                $changedType = $this->resolveChangeType($changedPropertyValue);
             }
 
             $changes['changes'][$propertyName] = [
-                'type' => $type,
                 'propertyLabel' => $this->getPropertyLabel($propertyName, $existingNode->getNodeType()),
                 'original' => $serializedOriginalValue,
                 'changed' => $serializedChangedValue,
@@ -733,10 +712,30 @@ class RevisionService
         return null;
     }
 
+    protected function resolveChangeType($value): string
+    {
+        if ($value instanceof ImageInterface) {
+            return 'image';
+        }
+        if ($value instanceof AssetInterface) {
+            return 'asset';
+        }
+        if ($value instanceof NodeInterface) {
+            return 'node';
+        }
+        if ($value instanceof \DateTime) {
+            return 'datetime';
+        }
+        if (is_array($value)) {
+            return 'array';
+        }
+        return 'text';
+    }
+
     /**
      * Returns a usable label/value for the given property for the diff in the UI
      */
-    protected function serializeValue($propertyValue, NodeInterface $contextNode): string
+    protected function serializeValue($propertyValue, NodeInterface $contextNode, bool $simple = false): string
     {
         // Convert node id to node if necessary
         if (is_string($propertyValue) && preg_match(NodeIdentifierValidator::PATTERN_MATCH_NODE_IDENTIFIER, $propertyValue) !== 0) {
@@ -745,13 +744,21 @@ class RevisionService
 
         if ($propertyValue instanceof AssetInterface) {
             $filename = $propertyValue->getResource()->getFilename();
-            $uri = $this->resourceManager->getPublicPersistentResourceUri($propertyValue->getThumbnail(300, 300)->getResource());
+            if ($simple) {
+                return $filename;
+            }
+            
+            try {
+                $uri = $propertyValue->getAssetProxy()->getThumbnailUri()->__toString();
+            } catch (\Exception $e) {
+                $uri = '';
+            }
 
             return json_encode([
                 'src' => $uri,
                 'alt' => $filename,
                 'title' => $propertyValue->getTitle() ?: $filename,
-            ], JSON_PRETTY_PRINT);
+            ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT);
         }
 
         if ($propertyValue instanceof NodeInterface) {
@@ -764,7 +771,7 @@ class RevisionService
 
         if (is_array($propertyValue)) {
             $propertyValue = array_map(function ($value) use ($contextNode) {
-                return $this->serializeValue($value, $contextNode);
+                return $this->serializeValue($value, $contextNode, true);
             } , $propertyValue);
         }
 

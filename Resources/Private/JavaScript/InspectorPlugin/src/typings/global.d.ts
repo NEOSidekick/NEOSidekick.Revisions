@@ -16,17 +16,10 @@ type ContentDimensions = Record<
     }
 >;
 
-type ImageProperty = {
+type AssetProperty = {
     src: string;
     alt: string;
-    title: string;
-};
-
-type AssetProperty = {
-    resource: {
-        uri: string;
-        filename: string;
-    };
+    filename: string;
 };
 
 type NodePropertyName = string;
@@ -44,11 +37,14 @@ type TextDiff = {
     };
 }[][];
 
+type ChangeType = 'text' | 'asset' | 'image' | 'datetime' | 'node' | 'array' | 'nodeAdded' | 'nodeRemoved';
+
 type NodeChange = {
-    type: 'text' | 'asset' | 'image' | 'datetime' | 'node' | 'array' | 'nodeAdded' | 'nodeRemoved';
     propertyLabel: string;
     original: NodePropertyValue;
     changed: NodePropertyValue;
+    originalType: ChangeType;
+    changedType: ChangeType;
     diff: TextDiff;
 };
 

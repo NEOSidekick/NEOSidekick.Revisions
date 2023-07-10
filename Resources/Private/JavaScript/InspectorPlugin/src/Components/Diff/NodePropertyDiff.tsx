@@ -1,21 +1,11 @@
 import React from 'react';
 
 type DiffProps = {
-    original: string;
-    changed: string;
+    value: string;
 };
 
-const NodePropertyDiff: React.FC<DiffProps> = ({ original, changed }) => {
-    return (
-        <tr>
-            <td>
-                {original}
-            </td>
-            <td>
-                {changed}
-            </td>
-        </tr>
-    );
+const NodePropertyDiff: React.FC<DiffProps> = ({ value }) => {
+    return <span>{value}</span>;
 };
 
 export default React.memo(NodePropertyDiff);

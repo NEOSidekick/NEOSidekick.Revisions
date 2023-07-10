@@ -1,32 +1,24 @@
 import React from 'react';
 
 type DiffProps = {
-    original: AssetProperty;
-    changed: AssetProperty;
+    encodedAssetData: string | null;
 };
 
-const AssetPropertyDiff: React.FC<DiffProps> = ({ original, changed }) => {
-    return (
-        <tr>
-            <td>
-                {original?.resource && (
-                    <del>
-                        <a href={original.resource.uri} target="_blank">
-                            {original.resource.filename}
-                        </a>
-                    </del>
-                )}
-            </td>
-            <td>
-                {changed?.resource && (
-                    <ins>
-                        <a href={changed.resource.uri} target="_blank">
-                            {changed.resource.filename}
-                        </a>
-                    </ins>
-                )}
-            </td>
-        </tr>
+const AssetPropertyDiff: React.FC<DiffProps> = ({ encodedAssetData }) => {
+    let assetData: AssetProperty = null;
+
+    if (encodedAssetData) {
+        try {
+            assetData = JSON.parse(encodedAssetData);
+        } catch (e) {}
+    }
+
+    return assetData?.src ? (
+        <a href={assetData.src} target="_blank" title={assetData.alt}>
+            {assetData.filename}
+        </a>
+    ) : (
+        <p>{encodedAssetData}</p>
     );
 };
 

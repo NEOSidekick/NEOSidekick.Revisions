@@ -40,7 +40,7 @@ const RevisionDiff: React.FC<RevisionDiffProps> = ({
 
     const fetchChanges = useCallback(() => {
         setIsLoading(true);
-        fetchFromBackend<{ diff: ChangeList }>(
+        fetchFromBackend<{ method: 'post', diff: ChangeList }>(
             { action: 'getDiff', params: { node: documentNode, revision } },
             setIsLoading
         )
