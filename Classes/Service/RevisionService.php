@@ -645,6 +645,14 @@ class RevisionService
                     'diff' => '',
                 ];
             }
+            if ($existingNode->isHiddenInIndex() != $importedNodeData['hiddenInIndex']) {
+                $changes['changes']['hiddenInIndex'] = [
+                    'propertyLabel' => 'Hidden in index',
+                    'original' => json_encode($existingNode->isHiddenInIndex()),
+                    'changed' => json_encode($importedNodeData['hiddenInIndex']),
+                    'diff' => '',
+                ];
+            }
         }
 
         foreach ($existingNode->getProperties() as $propertyName => $originalPropertyValue) {
