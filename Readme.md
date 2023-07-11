@@ -1,5 +1,5 @@
-[![Latest Stable Version](https://poser.pugx.org/codeq/revisions/v/stable)](https://packagist.org/packages/codeq/revisions)
-[![License](https://poser.pugx.org/codeq/revisions/license)](LICENSE)
+[![Latest Stable Version](https://poser.pugx.org/neosidekick/revisions/v/stable)](https://packagist.org/packages/codeq/revisions)
+[![License](https://poser.pugx.org/neosidekick/revisions/license)](LICENSE)
 
 # IN DEVELOPMENT: Code Q Revisions
 
@@ -15,11 +15,11 @@ Note: The package will be commercially licensed to cover development costs.
 
 ## Installation
 
-NEOSidekick.Revisions is available via packagist. `"codeq/revisions" : "~1.0"` to the require section of the `composer.json`
+NEOSidekick.Revisions is available via packagist. `"neosidekick/revisions" : "~1.0"` to the require section of the `composer.json`
 or run:
 
 ```console
-composer require codeq/revisions
+composer require neosidekick/revisions
 ```
 
 Then you should make sure that your database is up-to-date by running the following command:
@@ -89,4 +89,4 @@ Neos:
 ## License
 
 Commercially licensed. Please contact office@codeq.at if you already want to use it, 
-otherwise details follow once the first stable release is finsihed.
+otherwise details follow once the first stable release is finished.

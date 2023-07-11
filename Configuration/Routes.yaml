@@ -1,5 +1,5 @@
 - name: 'NEOSidekick.Revisions:Revisions'
-  uriPattern: 'neos/codeq/revisions/{@action}'
+  uriPattern: 'neos/neosidekick/revisions/{@action}'
   defaults:
     '@package': 'NEOSidekick.Revisions'
     '@controller': 'Revisions'

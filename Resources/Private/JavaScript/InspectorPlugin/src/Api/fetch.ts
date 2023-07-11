@@ -69,7 +69,7 @@ export default function fetchFromBackend<T = {}>(props: FetchProps, setLoadingSt
     setLoadingState(true);
 
     // Cannot use URL object here due to missing Safari support
-    let url = `/neos/codeq/revisions/${props.action}?`;
+    let url = `/neos/neosidekick/revisions/${props.action}?`;
 
     if (props.params['node']) {
         url += `&node=${encodeURIComponent(props.params['node'].contextPath)}`;
