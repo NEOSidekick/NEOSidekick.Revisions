@@ -31,7 +31,7 @@ import I18nRegistry from './Interfaces/I18nRegistry';
 )
 @neos((globalRegistry) => ({
     i18nRegistry: globalRegistry.get('i18n'),
-    frontendConfiguration: globalRegistry.get('frontendConfiguration').get('CodeQ.Revisions'),
+    frontendConfiguration: globalRegistry.get('frontendConfiguration').get('NEOSidekick.Revisions'),
 }))
 export default class RevisionsView extends PureComponent<{
     documentNodePath: string;

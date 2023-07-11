@@ -2,7 +2,7 @@ Neos:
   Flow:
     mvc:
       routes:
-        'CodeQ.Revisions':
+        'NEOSidekick.Revisions':
           position: 'before Neos.Neos'
 
     security:
@@ -13,4 +13,4 @@ Neos:
               'CodeQ:Revisions':
                 pattern: ControllerObjectName
                 patternOptions:
-                  controllerObjectNamePattern: 'CodeQ\Revisions\Controller\.*'
+                  controllerObjectNamePattern: 'NEOSidekick\Revisions\Controller\.*'

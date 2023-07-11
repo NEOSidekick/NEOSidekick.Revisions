@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace CodeQ\Revisions\Service;
+namespace NEOSidekick\Revisions\Service;
 
 /**
- * This file is part of the CodeQ.Revisions package.
+ * This file is part of the NEOSidekick.Revisions package.
  *
  * (c) 2022 CodeQ
  *
@@ -144,7 +144,7 @@ class NodeExportService extends \Neos\ContentRepository\Domain\Service\ImportExp
     /**
      * @inheritDoc
      *
-     * Adds special handling for boolean properties as false values are being dropped during export (see https://github.com/code-q-web-factory/CodeQ.Revisions/issues/13)
+     * Adds special handling for boolean properties as false values are being dropped during export (see https://github.com/code-q-web-factory/NEOSidekick.Revisions/issues/13)
      */
     protected function writeConvertedElement(array &$data, $propertyName, $elementName = null, $declaredPropertyType = null): void
     {

@@ -42,7 +42,7 @@ const RevisionList: React.FC<Props> = ({
             id: string,
             fallback = '',
             params: Record<string, unknown> | string[] = [],
-            packageKey = 'CodeQ.Revisions',
+            packageKey = 'NEOSidekick.Revisions',
             sourceName = 'Main'
         ): string => {
             return i18nRegistry.translate(id, fallback, params, packageKey, sourceName);

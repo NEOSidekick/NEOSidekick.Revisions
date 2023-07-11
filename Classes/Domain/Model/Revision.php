@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace CodeQ\Revisions\Domain\Model;
+namespace NEOSidekick\Revisions\Domain\Model;
 
 /**
- * This file is part of the CodeQ.Revisions package.
+ * This file is part of the NEOSidekick.Revisions package.
  *
  * (c) 2022 CodeQ
  *

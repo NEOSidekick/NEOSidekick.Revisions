@@ -1,7 +1,7 @@
-- name: 'CodeQ.Revisions:Revisions'
+- name: 'NEOSidekick.Revisions:Revisions'
   uriPattern: 'neos/codeq/revisions/{@action}'
   defaults:
-    '@package': 'CodeQ.Revisions'
+    '@package': 'NEOSidekick.Revisions'
     '@controller': 'Revisions'
     '@format': 'json'
     '@action': 'get'

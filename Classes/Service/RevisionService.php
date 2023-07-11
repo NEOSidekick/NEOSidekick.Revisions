@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace CodeQ\Revisions\Service;
+namespace NEOSidekick\Revisions\Service;
 
 use Neos\ContentRepository\Domain\Model\NodeData;
 use Neos\ContentRepository\Domain\Model\NodeInterface;
@@ -19,8 +19,8 @@ use Neos\Diff\Diff;
 use Neos\Diff\Renderer\AbstractRenderer;
 use Neos\Eel\FlowQuery\FlowQuery;
 use Neos\Flow\Annotations as Flow;
-use CodeQ\Revisions\Domain\Model\Revision;
-use CodeQ\Revisions\Domain\Repository\RevisionRepository;
+use NEOSidekick\Revisions\Domain\Model\Revision;
+use NEOSidekick\Revisions\Domain\Repository\RevisionRepository;
 use Neos\Flow\I18n\EelHelper\TranslationHelper;
 use Neos\Flow\I18n\Formatter\DatetimeFormatter;
 use Neos\Flow\I18n\Service as I18nService;
@@ -101,7 +101,7 @@ class RevisionService
     protected $contextFactory;
 
     /**
-     * @Flow\InjectConfiguration(package="CodeQ.Revisions")
+     * @Flow\InjectConfiguration(package="NEOSidekick.Revisions")
      * @var array
      */
     protected $settings;
@@ -258,7 +258,7 @@ class RevisionService
                         null,
                         null,
                         'Main',
-                        'CodeQ.Revisions'
+                        'NEOSidekick.Revisions'
                     ),
                     true
                 );

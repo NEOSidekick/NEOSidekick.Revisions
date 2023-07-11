@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 
 /**
- * This file is part of the CodeQ.Revisions package.
+ * This file is part of the NEOSidekick.Revisions package.
  *
  * (c) 2022 Code Q
  *
@@ -13,7 +13,7 @@ declare(strict_types=1);
  * source code.
  */
 
-namespace CodeQ\Revisions\Service;
+namespace NEOSidekick\Revisions\Service;
 
 use Neos\ContentRepository\Domain\Model\NodeData;
 use Neos\ContentRepository\Domain\Model\Workspace;

@@ -15,7 +15,7 @@ Note: The package will be commercially licensed to cover development costs.
 
 ## Installation
 
-CodeQ.Revisions is available via packagist. `"codeq/revisions" : "~1.0"` to the require section of the `composer.json`
+NEOSidekick.Revisions is available via packagist. `"codeq/revisions" : "~1.0"` to the require section of the `composer.json`
 or run:
 
 ```console
@@ -82,7 +82,7 @@ Neos:
   Neos:
     Ui:
       frontendConfiguration:
-        CodeQ.Revisions:
+        NEOSidekick.Revisions:
           showDeleteButton: false # Show the delete button in the revisions list
 ```
 

@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace CodeQ\Revisions\Command;
+namespace NEOSidekick\Revisions\Command;
 
 /**
- * This file is part of the CodeQ.Revisions package.
+ * This file is part of the NEOSidekick.Revisions package.
  *
  * (c) 2022 CodeQ
  *
@@ -13,12 +13,12 @@ namespace CodeQ\Revisions\Command;
  * source code.
  */
 
-use CodeQ\Revisions\Domain\Model\Revision;
+use NEOSidekick\Revisions\Domain\Model\Revision;
 use Neos\ContentRepository\Domain\Service\ContextFactoryInterface;
 use Neos\Diff\Renderer\Text\TextUnifiedRenderer;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Cli\CommandController;
-use CodeQ\Revisions\Service\RevisionService;
+use NEOSidekick\Revisions\Service\RevisionService;
 use Neos\Flow\Cli\Exception\StopCommandException;
 use Neos\Flow\Persistence\PersistenceManagerInterface;
 

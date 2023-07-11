@@ -1,10 +1,10 @@
 privilegeTargets:
   Neos\Flow\Security\Authorization\Privilege\Method\MethodPrivilege:
-    'CodeQ.Revisions:Revisions':
-      matcher: 'method(CodeQ\Revisions\Controller\RevisionsController->(.*)Action())'
+    'NEOSidekick.Revisions:Revisions':
+      matcher: 'method(NEOSidekick\Revisions\Controller\RevisionsController->(.*)Action())'
 
 roles:
   'Neos.Neos:LivePublisher':
     privileges:
-      - privilegeTarget: 'CodeQ.Revisions:Revisions'
+      - privilegeTarget: 'NEOSidekick.Revisions:Revisions'
         permission: GRANT

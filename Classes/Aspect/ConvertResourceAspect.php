@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace CodeQ\Revisions\Aspect;
+namespace NEOSidekick\Revisions\Aspect;
 
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Aop\JoinPointInterface;

@@ -3,11 +3,11 @@ Neos:
     Ui:
       resources:
         javascript:
-          CodeQ.Revisions:RevisionsView:
-            resource: 'resource://CodeQ.Revisions/Public/Assets/Plugin.js'
+          NEOSidekick.Revisions:RevisionsView:
+            resource: 'resource://NEOSidekick.Revisions/Public/Assets/Plugin.js'
     userInterface:
       translation:
         autoInclude:
-          CodeQ.Revisions:
+          NEOSidekick.Revisions:
             - 'NodeTypes/*'
             - 'Main'

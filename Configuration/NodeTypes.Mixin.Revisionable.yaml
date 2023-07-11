@@ -1,4 +1,4 @@
-CodeQ.Revisions:Mixin.Revisionable:
+NEOSidekick.Revisions:Mixin.Revisionable:
   abstract: true
   ui:
     inspector:
@@ -12,6 +12,6 @@ CodeQ.Revisions:Mixin.Revisionable:
         revisions:
           label: i18n
           group: 'revisions'
-          view: 'CodeQ.Revisions/Inspector/Views/RevisionsView'
+          view: 'NEOSidekick.Revisions/Inspector/Views/RevisionsView'
           position: 'start'
 

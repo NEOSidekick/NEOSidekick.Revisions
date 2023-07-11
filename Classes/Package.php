@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace CodeQ\Revisions;
+namespace NEOSidekick\Revisions;
 
 /**
- * This file is part of the CodeQ.Revisions package.
+ * This file is part of the NEOSidekick.Revisions package.
  *
  * (c) 2022 CodeQ
  *
@@ -13,7 +13,7 @@ namespace CodeQ\Revisions;
  * source code.
  */
 
-use CodeQ\Revisions\Service\RevisionService;
+use NEOSidekick\Revisions\Service\RevisionService;
 use Neos\ContentRepository\Domain\Model\Workspace;
 use Neos\Flow\Configuration\ConfigurationManager;
 use Neos\Flow\Core\Bootstrap;
@@ -25,7 +25,7 @@ class Package extends BasePackage
     public function boot(Bootstrap $bootstrap): void
     {
         $bootstrap->getSignalSlotDispatcher()->connect(ConfigurationManager::class, 'configurationManagerReady', function (ConfigurationManager $configurationManager) use ($bootstrap) {
-            $isEnabled = $configurationManager->getConfiguration(ConfigurationManager::CONFIGURATION_TYPE_SETTINGS, 'CodeQ.Revisions.enabled');
+            $isEnabled = $configurationManager->getConfiguration(ConfigurationManager::CONFIGURATION_TYPE_SETTINGS, 'NEOSidekick.Revisions.enabled');
 
             if ($isEnabled) {
                 $dispatcher = $bootstrap->getSignalSlotDispatcher();

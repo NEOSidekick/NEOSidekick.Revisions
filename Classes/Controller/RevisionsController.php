@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace CodeQ\Revisions\Controller;
+namespace NEOSidekick\Revisions\Controller;
 
 /**
- * This file is part of the CodeQ.Revisions package.
+ * This file is part of the NEOSidekick.Revisions package.
  *
  * (c) 2022 CodeQ
  *
@@ -13,8 +13,8 @@ namespace CodeQ\Revisions\Controller;
  * source code.
  */
 
-use CodeQ\Revisions\Domain\Model\Revision;
-use CodeQ\Revisions\Service\RevisionService;
+use NEOSidekick\Revisions\Domain\Model\Revision;
+use NEOSidekick\Revisions\Service\RevisionService;
 use Neos\ContentRepository\Domain\Model\NodeInterface;
 use Neos\Diff\Renderer\Html\HtmlArrayRenderer;
 use Neos\Flow\Annotations as Flow;
@@ -148,7 +148,7 @@ class RevisionsController extends ActionController
     protected function translate(string $id, string $fallback = '', array $arguments = []): string
     {
         try {
-            return $this->translator->translateById($id, $arguments, null, null, 'Main', 'CodeQ.Revisions');
+            return $this->translator->translateById($id, $arguments, null, null, 'Main', 'NEOSidekick.Revisions');
         } catch (\Exception $exception) {
         }
         return $fallback;

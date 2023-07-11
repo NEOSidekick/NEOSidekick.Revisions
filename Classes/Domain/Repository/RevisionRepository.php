@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace CodeQ\Revisions\Domain\Repository;
+namespace NEOSidekick\Revisions\Domain\Repository;
 
 /**
- * This file is part of the CodeQ.Revisions package.
+ * This file is part of the NEOSidekick.Revisions package.
  *
  * (c) 2022 CodeQ
  *
@@ -16,7 +16,7 @@ namespace CodeQ\Revisions\Domain\Repository;
 use Neos\Flow\Persistence\QueryResultInterface;
 use Neos\Flow\Persistence\Repository;
 use Neos\Flow\Annotations as Flow;
-use CodeQ\Revisions\Domain\Model\Revision;
+use NEOSidekick\Revisions\Domain\Model\Revision;
 
 /**
  * @method QueryResultInterface findByNodeIdentifier(string $nodeIdentifier)
