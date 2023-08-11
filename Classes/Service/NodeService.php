@@ -18,6 +18,7 @@ namespace NEOSidekick\Revisions\Service;
 use Neos\ContentRepository\Domain\Model\NodeData;
 use Neos\ContentRepository\Domain\Model\Workspace;
 use Neos\ContentRepository\Domain\Repository\NodeDataRepository;
+use Neos\ContentRepository\Domain\Service\ContentDimensionCombinator;
 use Neos\Flow\Annotations as Flow;
 use Psr\Log\LoggerInterface;
 
@@ -38,6 +39,12 @@ class NodeService
      * @var LoggerInterface
      */
     protected $logger;
+
+    /**
+     * @Flow\Inject
+     * @var ContentDimensionCombinator
+     */
+    protected $contentDimensionCombinator;
 
     /**
      * @return array<NodeData>
@@ -65,11 +72,22 @@ class NodeService
      */
     protected function findChildrenNodes(string $startingPointNodePath, Workspace $workspace, bool $recursive = false): array
     {
+        // Get all possible dimensions and their values to prevent empty revisions that sometimes occur
+        // when the CR mixes up the dimensions while fetching the nodes
+        // See https://github.com/neos/neos-development-collection/blob/8.3/Neos.ContentRepository/Classes/Domain/Repository/NodeDataRepository.php#L1668
+        $dimensionCombinations = $this->contentDimensionCombinator->getAllAllowedCombinations();
+        $dimensionValues = [];
+        foreach ($dimensionCombinations as $combination) {
+            foreach ($combination as $dimensionName => $dimensionValue) {
+                $dimensionValues[$dimensionName][] = $dimensionValue[0];
+            }
+        }
+
         return $this->nodeDataRepository->findByParentAndNodeType(
             $startingPointNodePath,
             'Neos.Neos:Content,Neos.Neos:ContentCollection',
             $workspace,
-            null,
+            $dimensionValues,
             false,
             $recursive
         );
