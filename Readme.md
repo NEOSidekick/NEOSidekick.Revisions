@@ -1,7 +1,7 @@
-[![Latest Stable Version](https://poser.pugx.org/neosidekick/revisions/v/stable)](https://packagist.org/packages/codeq/revisions)
+[![Latest Stable Version](https://poser.pugx.org/neosidekick/revisions/v/stable)](https://packagist.org/packages/neosidekick/revisions)
 [![License](https://poser.pugx.org/neosidekick/revisions/license)](LICENSE)
 
-# IN DEVELOPMENT: Code Q Revisions
+# NEOSidekick Revisions
 
 The revisions package will automatically create revisions of pages including their content every time changes are 
 published to live.
@@ -71,7 +71,7 @@ This can be used to flush via a cron job.
 The following settings can be adjusted via a `Settings.yaml` file in your project:
 
 ```yaml
-CodeQ:
+NEOSidekick:
   Revisions:
     compression:
       enabled: true # Enables compression of revision xml content in the database        
@@ -88,5 +88,5 @@ Neos:
 
 ## License
 
-Commercially licensed. Please contact office@codeq.at if you already want to use it, 
+Commercially licensed. Please contact office@neosidekick.com if you already want to use it, 
 otherwise details follow once the first stable release is finished.
