@@ -3,6 +3,8 @@
 
 # NEOSidekick Revisions
 
+## Note: The package will be commercially licensed to cover development costs.
+
 The revisions package will automatically create revisions of pages including their content every time changes are 
 published to live.
 
@@ -10,8 +12,6 @@ This enables you to understand which editor published which changes, and you can
 inspector for each page and revert to them.
 
 We also offer CLI commands to list, apply and remove revisions.
-
-Note: The package will be commercially licensed to cover development costs.
 
 ## Installation
 
