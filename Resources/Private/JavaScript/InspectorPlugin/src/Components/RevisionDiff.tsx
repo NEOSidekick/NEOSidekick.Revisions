@@ -56,7 +56,7 @@ const RevisionDiff: React.FC<RevisionDiffProps> = ({
     }, [revision]);
 
     return (
-        <div style={{ padding: '1rem', height: 'inherit', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '1rem', height: '100%', display: 'flex', flexDirection: 'column', position: 'absolute', inset: '0' }}>
             <h1 style={{ marginBottom: '2rem', fontSize: '1.5em', lineHeight: 1.3 }}>
                 {translate('diff.header', 'The revision contains the following changes', { version, date: formatRevisionDate(revision) })}
             </h1>
