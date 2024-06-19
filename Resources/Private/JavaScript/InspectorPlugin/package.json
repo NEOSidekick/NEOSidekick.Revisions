@@ -4,12 +4,13 @@
   "license": "proprietary",
   "private": true,
   "scripts": {
-    "build": "NODE_ENV=production neos-react-scripts build",
-    "watch": "neos-react-scripts watch"
+    "build": "node build.js",
+    "watch": "node build.js --watch"
   },
   "dependencies": {
-    "@neos-project/neos-ui-extensibility": "^5.3.4",
-    "plow-js": "^2.2.0"
+    "@neos-project/neos-ui-extensibility": "^8.0.0",
+    "plow-js": "^2.2.0",
+    "esbuild": "~0.17.18"
   },
   "neos": {
     "buildTargetDirectory": "../../../Public/Assets"
