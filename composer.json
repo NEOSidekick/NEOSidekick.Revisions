@@ -9,8 +9,8 @@
     ],
     "require": {
         "php": ">=7.4",
-        "neos/neos": "^5.3 || ^7.0 || dev-master",
-        "neos/neos-ui": "^5.3 || ^7.0 || dev-master",
+        "neos/neos": "^8.0 || dev-master",
+        "neos/neos-ui": "^8.0 || dev-master",
         "ext-xmlreader": "*",
         "ext-xmlwriter": "*",
         "ext-libxml": "*"
