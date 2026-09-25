@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace NEOSidekick\Revisions\Service;
 
+use Neos\ContentRepository\Exception\ImportException;
 use Neos\Flow\Annotations as Flow;
 
 /**
@@ -42,6 +43,54 @@ class NodeImportService extends \Neos\ContentRepository\Domain\Service\ImportExp
             $this->persistedNodeIdentifiers[] = $nodeData['identifier'];
             parent::persistNodeData($nodeData);
         }
+    }
+
+    /**
+     * Returns referenced objects that still exist unchanged instead of mapping the exported data onto them, which would
+     * reset shared assets to their state in the revision and clear their thumbnails (see https://github.com/NEOSidekick/NEOSidekick.Revisions/issues/18)
+     *
+     * @inheritDoc
+     */
+    protected function convertElementToValue(\XMLReader $reader, $currentType, $currentEncoding, $currentClassName, $currentNodeIdentifier, $currentProperty)
+    {
+        $decodedJson = $currentType === 'object' && $currentEncoding === 'json' ? json_decode($reader->value, true) : null;
+        if (!is_array($decodedJson)) {
+            return parent::convertElementToValue($reader, $currentType, $currentEncoding, $currentClassName, $currentNodeIdentifier, $currentProperty);
+        }
+
+        $existingObject = $this->findExistingObject($decodedJson, $currentClassName);
+        if ($existingObject !== null) {
+            return $existingObject;
+        }
+
+        // A recreated object, e.g. a deleted image variant, must reference its still existing original without rewriting it
+        $value = $this->propertyMapper->convert($this->reduceExistingObjectsToIdentity($decodedJson), $currentClassName, $this->propertyMappingConfiguration);
+        if ($this->propertyMapper->getMessages()->hasErrors()) {
+            throw new ImportException(sprintf('Could not convert element <%s> to %s for node %s', $currentProperty, $currentClassName, $currentNodeIdentifier), 1472992034);
+        }
+        $this->persistEntities($value);
+        return $value;
+    }
+
+    protected function findExistingObject(array $source, ?string $className): ?object
+    {
+        if (!isset($source['__identity']) || $className === null) {
+            return null;
+        }
+        return $this->persistenceManager->getObjectByIdentifier($source['__identity'], $className);
+    }
+
+    protected function reduceExistingObjectsToIdentity(array $source): array
+    {
+        foreach ($source as $key => $value) {
+            if (!is_array($value)) {
+                continue;
+            }
+            $source[$key] = $this->findExistingObject($value, $value['__type'] ?? null) !== null
+                ? ['__identity' => $value['__identity'], '__type' => $value['__type']]
+                : $this->reduceExistingObjectsToIdentity($value);
+        }
+        return $source;
     }
 
     /**
