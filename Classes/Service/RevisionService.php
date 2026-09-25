@@ -602,7 +602,7 @@ class RevisionService
         $importedProperties = $importedNodeData['properties'] ?? [];
 
         $changes = [
-            'type' => $importedProperties === null ? 'removeNode' : 'changeNode',
+            'type' => $importedNodeData === null ? 'removeNode' : 'changeNode',
             'node' => [
                 'identifier' => $existingNode->getIdentifier(),
                 'label' => $existingNode->getLabel(),
@@ -616,6 +616,10 @@ class RevisionService
             ],
             'changes' => [],
         ];
+
+        if ($importedNodeData === null) {
+            return $changes;
+        }
 
         if ($importedNodeData) {
             // Check for changes to nodes attributes
