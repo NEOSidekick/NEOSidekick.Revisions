@@ -659,7 +659,7 @@ class RevisionService
             $changedPropertyValue = $importedProperties[$propertyName] ?? '';
             $diff = '';
 
-            if ($changedPropertyValue === $originalPropertyValue && !$existingNode->isRemoved()) {
+            if (($changedPropertyValue === $originalPropertyValue || $this->isSameDateTime($originalPropertyValue, $changedPropertyValue)) && !$existingNode->isRemoved()) {
                 continue;
             }
 
@@ -731,13 +731,24 @@ class RevisionService
         if ($value instanceof NodeInterface) {
             return 'node';
         }
-        if ($value instanceof \DateTime) {
+        if ($value instanceof \DateTimeInterface) {
             return 'datetime';
         }
         if (is_array($value)) {
             return 'array';
         }
         return 'text';
+    }
+
+    /**
+     * Compares the instant only, as revisions exported before #20 contain the UTC offset instead of the time zone
+     * and no fractions of a second
+     */
+    protected function isSameDateTime($originalValue, $changedValue): bool
+    {
+        return $originalValue instanceof \DateTimeInterface
+            && $changedValue instanceof \DateTimeInterface
+            && $originalValue->getTimestamp() === $changedValue->getTimestamp();
     }
 
     /**
