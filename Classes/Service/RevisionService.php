@@ -301,6 +301,10 @@ class RevisionService
 
         $changesByNode = [];
         foreach ($nodesInImport as $nodeDataInImport) {
+            // Removed node data in a revision is neither live content nor restored by applying it
+            if ($nodeDataInImport['removed']) {
+                continue;
+            }
             $importedNodeIdentifier = $nodeDataInImport['identifier'];
             $dimensionHash = Utility::sortDimensionValueArrayAndReturnDimensionsHash($nodeDataInImport['dimensionValues']);
 
