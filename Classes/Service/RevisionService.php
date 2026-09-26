@@ -712,6 +712,10 @@ class RevisionService
         $nodeVariants = $context->getNodeVariantsByIdentifier($importedNodeIdentifier);
 
         foreach ($nodeVariants as $nodeVariant) {
+            // The node factory returns null for removed, shadow and inaccessible node data
+            if ($nodeVariant === null) {
+                continue;
+            }
             $variantDimensions = $nodeVariant->getDimensions();
             $variantDimensionHash = Utility::sortDimensionValueArrayAndReturnDimensionsHash($variantDimensions);
             if ($variantDimensionHash === $dimensionHash) {
