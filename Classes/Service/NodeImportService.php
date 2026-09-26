@@ -55,7 +55,7 @@ class NodeImportService extends \Neos\ContentRepository\Domain\Service\ImportExp
     protected $nodesInImport = [];
 
     /**
-     * Only set while a revision is parsed to be applied, a diff never recreates deleted objects
+     * Only set while a revision is parsed to be applied, neither a diff nor a validation recreates deleted objects
      *
      * @var bool
      */
@@ -182,13 +182,14 @@ class NodeImportService extends \Neos\ContentRepository\Domain\Service\ImportExp
     }
 
     /**
+     * @param bool $restoreDeletedAssets Recreates deleted assets from their stored content, only for applying a revision
      * @return array<array> The node data of all variants, parents before their children
      * @throws ImportException if the XML cannot be read completely
      */
-    public function parseNodes(\XMLReader $xmlReader, string $targetPath): array
+    public function parseNodes(\XMLReader $xmlReader, string $targetPath, bool $restoreDeletedAssets = false): array
     {
         $this->nodesInImport = [];
-        $this->restoreDeletedAssets = true;
+        $this->restoreDeletedAssets = $restoreDeletedAssets;
         try {
             $this->import($xmlReader, $targetPath);
         } finally {
@@ -200,7 +201,6 @@ class NodeImportService extends \Neos\ContentRepository\Domain\Service\ImportExp
     public function getNodesInImport(\XMLReader $xmlReader, $targetPath, $resourceLoadPath = null): array
     {
         $this->nodesInImport = [];
-        $this->restoreDeletedAssets = false;
         try {
             $this->import($xmlReader, $targetPath, $resourceLoadPath);
         } catch (\Exception $e) {
