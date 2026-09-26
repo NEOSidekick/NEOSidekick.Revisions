@@ -301,6 +301,10 @@ class RevisionService
 
         $changesByNode = [];
         foreach ($nodesInImport as $nodeDataInImport) {
+            // Removed node data in a revision is neither live content nor restored by applying it
+            if ($nodeDataInImport['removed']) {
+                continue;
+            }
             $importedNodeIdentifier = $nodeDataInImport['identifier'];
             $dimensionHash = Utility::sortDimensionValueArrayAndReturnDimensionsHash($nodeDataInImport['dimensionValues']);
 
@@ -716,6 +720,10 @@ class RevisionService
         $nodeVariants = $context->getNodeVariantsByIdentifier($importedNodeIdentifier);
 
         foreach ($nodeVariants as $nodeVariant) {
+            // The node factory returns null for removed, shadow and inaccessible node data
+            if ($nodeVariant === null) {
+                continue;
+            }
             $variantDimensions = $nodeVariant->getDimensions();
             $variantDimensionHash = Utility::sortDimensionValueArrayAndReturnDimensionsHash($variantDimensions);
             if ($variantDimensionHash === $dimensionHash) {
