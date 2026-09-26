@@ -22,6 +22,7 @@ use Neos\Diff\Renderer\AbstractRenderer;
 use Neos\Flow\Annotations as Flow;
 use NEOSidekick\Revisions\Domain\Model\Revision;
 use NEOSidekick\Revisions\Domain\Repository\RevisionRepository;
+use NEOSidekick\Revisions\Exception\RevisionNotApplicableException;
 use Neos\Flow\I18n\EelHelper\TranslationHelper;
 use Neos\Flow\I18n\Formatter\DatetimeFormatter;
 use Neos\Flow\I18n\Service as I18nService;
@@ -259,11 +260,21 @@ class RevisionService
             return false;
         }
 
+        try {
+            $nodesInRevision = $this->nodeImportService->parseNodes($revisionContent, $nodePath);
+        } catch (\Throwable $throwable) {
+            $this->logger->error(sprintf('Failed to read revision %s: %s', $revision->getIdentifier(), $throwable->getMessage()));
+            return false;
+        }
+        $problems = $this->validateNodes($nodesInRevision, $liveWorkspace);
+        if ($problems !== []) {
+            throw new RevisionNotApplicableException($problems);
+        }
+
         // Staging the revision in a workspace and publishing it lets search indexing, frontend revalidation,
         // redirects and the event log handle it like any other change to live
         $workspace = $this->createTemporaryWorkspace($liveWorkspace);
         try {
-            $nodesInRevision = $this->nodeImportService->parseNodes($revisionContent, $nodePath);
             $this->stageNodes($nodesInRevision, $workspace);
             $this->removeNodesMissingInRevision($node, $nodesInRevision, $workspace);
             $this->persistenceManager->persistAll();
@@ -301,6 +312,89 @@ class RevisionService
         }
 
         return true;
+    }
+
+    /**
+     * Returns why the revision cannot be applied, not even when forced
+     *
+     * @return array<string>
+     */
+    public function validateRevision(Revision $revision): array
+    {
+        $context = $this->contextFactory->create();
+        $node = $context->getNodeByIdentifier($revision->getNodeIdentifier());
+        $revisionContent = $revision->getContent();
+        if (!$node || !$revisionContent) {
+            return [];
+        }
+        try {
+            $nodesInRevision = $this->nodeImportService->parseNodes($revisionContent, $node->getParentPath());
+        } catch (\Throwable $throwable) {
+            // applyRevision() logs and rejects unreadable revisions
+            return [];
+        }
+        return $this->validateNodes($nodesInRevision, $context->getWorkspace());
+    }
+
+    /**
+     * Finds node types that no longer exist and nodes that cannot be created, moved back or retyped under their parent
+     *
+     * @param array<array> $nodesInRevision
+     * @return array<string>
+     */
+    protected function validateNodes(array $nodesInRevision, Workspace $liveWorkspace): array
+    {
+        $problems = [];
+        $nodeTypeNamesByPath = [];
+        foreach ($nodesInRevision as $nodeData) {
+            if ($nodeData['removed']) {
+                continue;
+            }
+            if (!$this->nodeTypeManager->hasNodeType($nodeData['nodeType'])) {
+                $problems[] = sprintf('Node type "%s" of node "%s" does not exist', $nodeData['nodeType'], $nodeData['path']);
+                continue;
+            }
+            $nodeTypeNamesByPath[$nodeData['path']] = $nodeData['nodeType'];
+
+            $context = $this->createContext($liveWorkspace, $nodeData['dimensionValues']);
+            $existingNode = $context->getNodeByIdentifier($nodeData['identifier']);
+            if ($existingNode !== null && $existingNode->getPath() === $nodeData['path'] && $existingNode->getNodeType()->getName() === $nodeData['nodeType']) {
+                continue;
+            }
+
+            // The node would be created, moved back or retyped, so its parent must allow it
+            $nodeName = NodePaths::getNodeNameFromPath($nodeData['path']);
+            $parentNodeType = $this->resolveNodeType($nodeData['parentPath'], $context, $nodeTypeNamesByPath);
+            if ($parentNodeType === null) {
+                $problems[] = sprintf('Parent "%s" of node "%s" does not exist', $nodeData['parentPath'], $nodeData['path']);
+                continue;
+            }
+            if (isset($parentNodeType->getAutoCreatedChildNodes()[$nodeName])) {
+                continue;
+            }
+            $nodeType = $this->nodeTypeManager->getNodeType($nodeData['nodeType']);
+            $parentName = NodePaths::getNodeNameFromPath($nodeData['parentPath']);
+            $grandParentNodeType = $this->resolveNodeType(NodePaths::getParentPath($nodeData['parentPath']), $context, $nodeTypeNamesByPath);
+            $isAllowed = $grandParentNodeType !== null && isset($grandParentNodeType->getAutoCreatedChildNodes()[$parentName])
+                ? $grandParentNodeType->allowsGrandchildNodeType($parentName, $nodeType)
+                : $parentNodeType->allowsChildNodeType($nodeType);
+            if (!$isAllowed) {
+                $problems[] = sprintf('Node "%s" of type "%s" is not allowed in "%s"', $nodeData['path'], $nodeData['nodeType'], $nodeData['parentPath']);
+            }
+        }
+        return $problems;
+    }
+
+    /**
+     * @param array<string, string> $nodeTypeNamesByPath Node types of the revision, which override live
+     */
+    protected function resolveNodeType(string $path, ContentContext $context, array $nodeTypeNamesByPath): ?NodeType
+    {
+        if (isset($nodeTypeNamesByPath[$path])) {
+            return $this->nodeTypeManager->getNodeType($nodeTypeNamesByPath[$path]);
+        }
+        $node = $path !== '' ? $context->getNode($path) : null;
+        return $node !== null ? $node->getNodeType() : null;
     }
 
     /**

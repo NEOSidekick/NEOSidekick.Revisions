@@ -86,6 +86,15 @@ Neos:
           showDeleteButton: false # Show the delete button in the revisions list
 ```
 
+## Applying a revision
+
+Applying a revision publishes the restored page to live like an editor would. Every package that listens to node
+or publishing signals, such as search indexing, frontend revalidation or automatic translation, behaves as for a
+manual publish.
+
+A revision is refused, with a list of the reasons, if one of its node types no longer exists or if a node it would
+create, move back or retype is no longer allowed in its parent.
+
 ## License
 
 Commercially licensed. Please contact office@neosidekick.com if you already want to use it, 

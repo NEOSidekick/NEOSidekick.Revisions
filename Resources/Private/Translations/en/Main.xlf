@@ -104,6 +104,9 @@
             <trans-unit id="error.revisionNotApplied">
                 <source>Failed to apply revision</source>
             </trans-unit>
+            <trans-unit id="error.revisionNotApplicable">
+                <source>Revision cannot be applied</source>
+            </trans-unit>
 
             <trans-unit id="confirm.applyRevision">
                 <source>Do you want to apply revision {revisionDate} by {creator}?</source>
