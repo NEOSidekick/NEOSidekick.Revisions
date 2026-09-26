@@ -15,6 +15,7 @@ use Neos\ContentRepository\Domain\Service\ContextFactoryInterface;
 use Neos\ContentRepository\Domain\Service\NodeTypeManager;
 use Neos\ContentRepository\Domain\Utility\NodePaths;
 use Neos\ContentRepository\Exception\NodeTypeNotFoundException;
+use Neos\ContentRepository\Service\AuthorizationService;
 use Neos\ContentRepository\Utility;
 use Neos\ContentRepository\Validation\Validator\NodeIdentifierValidator;
 use Neos\Diff\Diff;
@@ -22,6 +23,7 @@ use Neos\Diff\Renderer\AbstractRenderer;
 use Neos\Flow\Annotations as Flow;
 use NEOSidekick\Revisions\Domain\Model\Revision;
 use NEOSidekick\Revisions\Domain\Repository\RevisionRepository;
+use NEOSidekick\Revisions\Exception\RevisionApplyDeniedException;
 use NEOSidekick\Revisions\Exception\RevisionNotApplicableException;
 use Neos\Flow\I18n\EelHelper\TranslationHelper;
 use Neos\Flow\I18n\Formatter\DatetimeFormatter;
@@ -31,6 +33,7 @@ use Neos\Flow\Persistence\Exception\IllegalObjectTypeException;
 use Neos\Flow\Persistence\PersistenceManagerInterface;
 use Neos\Flow\ResourceManagement\ResourceManager;
 use Neos\Flow\Security\Context;
+use Neos\Flow\Security\Exception\AccessDeniedException;
 use Neos\Flow\Utility\Algorithms;
 use Neos\Media\Domain\Model\AssetInterface;
 use Neos\Media\Domain\Model\Image;
@@ -181,6 +184,12 @@ class RevisionService
      */
     protected $resourceManager;
 
+    /**
+     * @Flow\Inject
+     * @var AuthorizationService
+     */
+    protected $authorizationService;
+
     public function createRevision(NodeInterface $node, string $label = null): ?Revision
     {
         return $this->createRevisionInternal($node, $label);
@@ -261,12 +270,16 @@ class RevisionService
         }
 
         try {
-            $nodesInRevision = $this->nodeImportService->parseNodes($revisionContent, $nodePath);
+            $nodesInRevision = $this->withConfiguredAuthorizationChecks(function () use ($revisionContent, $nodePath) {
+                return $this->nodeImportService->parseNodes($revisionContent, $nodePath);
+            });
         } catch (\Throwable $throwable) {
             $this->logger->error(sprintf('Failed to read revision %s: %s', $revision->getIdentifier(), $throwable->getMessage()));
             return false;
         }
-        $problems = $this->validateNodes($nodesInRevision, $liveWorkspace);
+        $problems = $this->withConfiguredAuthorizationChecks(function () use ($nodesInRevision, $liveWorkspace) {
+            return $this->validateNodes($nodesInRevision, $liveWorkspace);
+        });
         if ($problems !== []) {
             throw new RevisionNotApplicableException($problems);
         }
@@ -275,13 +288,18 @@ class RevisionService
         // redirects and the event log handle it like any other change to live
         $workspace = $this->createTemporaryWorkspace($liveWorkspace);
         try {
-            $this->stageNodes($nodesInRevision, $workspace);
-            $this->removeNodesMissingInRevision($node, $nodesInRevision, $workspace);
-            $this->persistenceManager->persistAll();
-            $unpublishedNodes = $this->publishingService->getUnpublishedNodes($workspace);
-            $this->logger->info(sprintf('Publishing %d changed node variants to apply revision %s', count($unpublishedNodes), $revision->getIdentifier()));
-            $this->publishingService->publishNodes($unpublishedNodes, $liveWorkspace);
-            $this->persistenceManager->persistAll();
+            $this->withConfiguredAuthorizationChecks(function () use ($nodesInRevision, $node, $workspace, $liveWorkspace, $revision) {
+                $this->stageNodes($nodesInRevision, $workspace);
+                $this->removeNodesMissingInRevision($node, $nodesInRevision, $workspace);
+                $this->persistenceManager->persistAll();
+                $publishedNodes = $this->publishingService->getUnpublishedNodes($workspace);
+                $this->assertNodesAreEditable($publishedNodes);
+                $this->logger->info(sprintf('Publishing %d changed node variants to apply revision %s', count($publishedNodes), $revision->getIdentifier()));
+                $this->publishingService->publishNodes($publishedNodes, $liveWorkspace);
+                $this->persistenceManager->persistAll();
+            });
+        } catch (AccessDeniedException $exception) {
+            throw new RevisionApplyDeniedException($exception->getMessage(), 1790500002, $exception);
         } catch (\Throwable $throwable) {
             $this->logger->error(sprintf('Failed to apply revision %s: %s', $revision->getIdentifier(), $throwable->getMessage()));
             return false;
@@ -327,13 +345,52 @@ class RevisionService
         if (!$node || !$revisionContent) {
             return [];
         }
-        try {
-            $nodesInRevision = $this->nodeImportService->parseNodes($revisionContent, $node->getParentPath());
-        } catch (\Throwable $throwable) {
-            // applyRevision() logs and rejects unreadable revisions
-            return [];
+        return $this->withConfiguredAuthorizationChecks(function () use ($revisionContent, $node, $context) {
+            try {
+                $nodesInRevision = $this->nodeImportService->parseNodes($revisionContent, $node->getParentPath());
+            } catch (\Throwable $throwable) {
+                // applyRevision() logs and rejects unreadable revisions
+                return [];
+            }
+            return $this->validateNodes($nodesInRevision, $context->getWorkspace());
+        });
+    }
+
+    /**
+     * Publishing writes every variant through Node::setNodeData(), which the edit privileges cover. Staging only checks
+     * them through the setters it calls, and Node::setIndex() is not covered, so a variant that only changed its position
+     * would fail halfway through publishing without this check.
+     *
+     * @param array<NodeInterface> $nodes
+     * @throws AccessDeniedException
+     */
+    protected function assertNodesAreEditable(array $nodes): void
+    {
+        if ($this->securityContext->areAuthorizationChecksDisabled()) {
+            return;
         }
-        return $this->validateNodes($nodesInRevision, $context->getWorkspace());
+        foreach ($nodes as $node) {
+            if (!$this->authorizationService->isGrantedToEditNode($node)) {
+                throw new AccessDeniedException(sprintf('Not allowed to edit node "%s" in %s', $node->getPath(), json_encode($node->getDimensions())), 1790500003);
+            }
+        }
+    }
+
+    /**
+     * Runs the callback without the editor's node privileges unless the settings ask for them
+     *
+     * @return mixed The result of the callback
+     */
+    protected function withConfiguredAuthorizationChecks(\Closure $callback)
+    {
+        if (!($this->settings['revisions']['applyWithoutAuthorizationChecks'] ?? true)) {
+            return $callback();
+        }
+        $result = null;
+        $this->securityContext->withoutAuthorizationChecks(static function () use ($callback, &$result) {
+            $result = $callback();
+        });
+        return $result;
     }
 
     /**
@@ -421,8 +478,11 @@ class RevisionService
                 $node = $node->createVariantForContext($context);
             }
 
-            // Only differences are written, so unchanged variants are neither published nor reindexed
-            $node->setNodeType($nodeType);
+            // Only differences are written, so unchanged variants are neither published nor reindexed, and node
+            // privileges are only checked for variants that change
+            if ($node->getNodeType()->getName() !== $nodeType->getName()) {
+                $node->setNodeType($nodeType);
+            }
             foreach ($node->getNodeData()->getProperties() as $propertyName => $propertyValue) {
                 if ($propertyValue !== null && !array_key_exists($propertyName, $nodeData['properties'])) {
                     $node->removeProperty($propertyName);
@@ -434,8 +494,12 @@ class RevisionService
                     $node->setProperty($propertyName, $propertyValue);
                 }
             }
-            $node->setHidden($nodeData['hidden']);
-            $node->setHiddenInIndex($nodeData['hiddenInIndex']);
+            if ($node->isHidden() !== $nodeData['hidden']) {
+                $node->setHidden($nodeData['hidden']);
+            }
+            if ($node->isHiddenInIndex() !== $nodeData['hiddenInIndex']) {
+                $node->setHiddenInIndex($nodeData['hiddenInIndex']);
+            }
             // The setters only skip unchanged \DateTime values, the import creates \DateTimeImmutable
             if ($node->getHiddenBeforeDateTime() != ($nodeData['hiddenBeforeDateTime'] ?? null)) {
                 $node->setHiddenBeforeDateTime($nodeData['hiddenBeforeDateTime'] ?? null);
@@ -443,7 +507,9 @@ class RevisionService
             if ($node->getHiddenAfterDateTime() != ($nodeData['hiddenAfterDateTime'] ?? null)) {
                 $node->setHiddenAfterDateTime($nodeData['hiddenAfterDateTime'] ?? null);
             }
-            $node->setAccessRoles($nodeData['accessRoles']);
+            if ($node->getAccessRoles() !== $nodeData['accessRoles']) {
+                $node->setAccessRoles($nodeData['accessRoles']);
+            }
 
             // Content moved to another page since the revision is moved back, see checkRevisionForConflicts()
             if ($node->getPath() !== $nodeData['path']) {
@@ -576,16 +642,18 @@ class RevisionService
     protected function removeTemporaryWorkspace(Workspace $workspace): void
     {
         try {
-            // Nodes are only left over if applying failed. Unflushed ones would escape discarding and end up
-            // without a workspace once it is deleted.
-            $this->persistenceManager->persistAll();
-            $this->publishingService->discardAllNodes($workspace);
-            $rootNodeData = $workspace->getRootNodeData();
-            $this->workspaceRepository->remove($workspace);
-            $this->persistenceManager->persistAll();
-            // Deleting a workspace only unsets the workspace of its root node data
-            $this->nodeDataRepository->remove($rootNodeData);
-            $this->persistenceManager->persistAll();
+            $this->securityContext->withoutAuthorizationChecks(function () use ($workspace) {
+                // Nodes are only left over if applying failed. Unflushed ones would escape discarding and end up
+                // without a workspace once it is deleted.
+                $this->persistenceManager->persistAll();
+                $this->publishingService->discardAllNodes($workspace);
+                $rootNodeData = $workspace->getRootNodeData();
+                $this->workspaceRepository->remove($workspace);
+                $this->persistenceManager->persistAll();
+                // Deleting a workspace only unsets the workspace of its root node data
+                $this->nodeDataRepository->remove($rootNodeData);
+                $this->persistenceManager->persistAll();
+            });
         } catch (\Throwable $throwable) {
             $this->logger->error(sprintf('Failed to remove temporary workspace %s: %s', $workspace->getName(), $throwable->getMessage()));
         }

@@ -14,6 +14,7 @@ namespace NEOSidekick\Revisions\Controller;
  */
 
 use NEOSidekick\Revisions\Domain\Model\Revision;
+use NEOSidekick\Revisions\Exception\RevisionApplyDeniedException;
 use NEOSidekick\Revisions\Exception\RevisionNotApplicableException;
 use NEOSidekick\Revisions\Service\RevisionService;
 use Neos\ContentRepository\Domain\Model\NodeInterface;
@@ -94,6 +95,8 @@ class RevisionsController extends ActionController
 
         try {
             $result = $this->revisionService->applyRevision($revision->getIdentifier(), $node->getParentPath());
+        } catch (RevisionApplyDeniedException $exception) {
+            $this->throwStatus(403, $this->translate('error.revisionApplyDenied', 'Not allowed to apply the revision'), json_encode([$exception->getMessage()], JSON_PRETTY_PRINT));
         } catch (RevisionNotApplicableException $exception) {
             $this->throwStatus(422, $this->translate('error.revisionNotApplicable', 'Revision cannot be applied'), json_encode($exception->getProblems(), JSON_PRETTY_PRINT));
         }

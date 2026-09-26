@@ -14,6 +14,7 @@ namespace NEOSidekick\Revisions\Command;
  */
 
 use NEOSidekick\Revisions\Domain\Model\Revision;
+use NEOSidekick\Revisions\Exception\RevisionApplyDeniedException;
 use NEOSidekick\Revisions\Exception\RevisionNotApplicableException;
 use Neos\ContentRepository\Domain\Service\ContextFactoryInterface;
 use Neos\Diff\Renderer\Text\TextUnifiedRenderer;
@@ -131,7 +132,7 @@ class RevisionCommandController extends CommandController
         $this->outputLine('Applying revision "%s"', [$revisionIdentifier]);
         try {
             $result = $this->revisionService->applyRevision($revisionIdentifier, $node->getParentPath());
-        } catch (RevisionNotApplicableException $exception) {
+        } catch (RevisionNotApplicableException | RevisionApplyDeniedException $exception) {
             $this->outputLine('Revision cannot be applied:');
             $this->outputLine($exception->getMessage());
             $this->quit(1);

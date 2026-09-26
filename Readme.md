@@ -77,6 +77,7 @@ NEOSidekick:
       enabled: true # Enables compression of revision xml content in the database        
     revisions:
       createRevisionAfterApply: true # Create a revision after applying a revision
+      applyWithoutAuthorizationChecks: true # Ignore the editor's node privileges when applying a revision
 
 Neos:
   Neos:
@@ -94,6 +95,10 @@ manual publish.
 
 A revision is refused, with a list of the reasons, if one of its node types no longer exists or if a node it would
 create, move back or retype is no longer allowed in its parent.
+
+By default the editor's node privileges are not evaluated, as in version 1.1.0. With
+`applyWithoutAuthorizationChecks: false`, applying a revision that would change a node the editor may not edit is
+refused as a whole, before anything is published. The CLI command always applies without authorization checks.
 
 ## License
 
