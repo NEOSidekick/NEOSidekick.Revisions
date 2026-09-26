@@ -313,6 +313,7 @@ class RevisionService
                 $changesByNode[$importedNodeIdentifier][$dimensionHash] = [
                     'type' => 'addNode',
                     'node' => [
+                        'identifier' => $importedNodeIdentifier,
                         'label' => $this->translate($importedNodeType->getLabel()),
                         'lastModificationDateTime' => $nodeDataInImport['lastModificationDateTime'],
                         'dimensions' => $nodeDataInImport['dimensionValues'] ?? [],
