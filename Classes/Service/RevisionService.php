@@ -284,11 +284,13 @@ class RevisionService
             throw new RevisionNotApplicableException($problems);
         }
 
+        $this->emitRevisionApplying($node, $revision);
+
         // Staging the revision in a workspace and publishing it lets search indexing, frontend revalidation,
         // redirects and the event log handle it like any other change to live
         $workspace = $this->createTemporaryWorkspace($liveWorkspace);
         try {
-            $this->withConfiguredAuthorizationChecks(function () use ($nodesInRevision, $node, $workspace, $liveWorkspace, $revision) {
+            $publishedNodes = $this->withConfiguredAuthorizationChecks(function () use ($nodesInRevision, $node, $workspace, $liveWorkspace, $revision) {
                 $this->stageNodes($nodesInRevision, $workspace);
                 $this->removeNodesMissingInRevision($node, $nodesInRevision, $workspace);
                 $this->persistenceManager->persistAll();
@@ -297,6 +299,7 @@ class RevisionService
                 $this->logger->info(sprintf('Publishing %d changed node variants to apply revision %s', count($publishedNodes), $revision->getIdentifier()));
                 $this->publishingService->publishNodes($publishedNodes, $liveWorkspace);
                 $this->persistenceManager->persistAll();
+                return $publishedNodes;
             });
         } catch (AccessDeniedException $exception) {
             throw new RevisionApplyDeniedException($exception->getMessage(), 1790500002, $exception);
@@ -328,6 +331,8 @@ class RevisionService
         } else {
             unset(self::$nodesForRevisions[$node->getIdentifier()]);
         }
+
+        $this->emitRevisionApplied($node, $revision, $publishedNodes);
 
         return true;
     }
@@ -452,6 +457,25 @@ class RevisionService
         }
         $node = $path !== '' ? $context->getNode($path) : null;
         return $node !== null ? $node->getNodeType() : null;
+    }
+
+    /**
+     * Signals that a revision is about to be staged and published
+     *
+     * @Flow\Signal
+     */
+    protected function emitRevisionApplying(NodeInterface $documentNode, Revision $revision): void
+    {
+    }
+
+    /**
+     * Signals that a revision was published
+     *
+     * @Flow\Signal
+     * @param array<NodeInterface> $stagedVariants The node variants that differed from live and were published
+     */
+    protected function emitRevisionApplied(NodeInterface $documentNode, Revision $revision, array $stagedVariants): void
+    {
     }
 
     /**

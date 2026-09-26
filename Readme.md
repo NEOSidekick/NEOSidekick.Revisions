@@ -100,6 +100,9 @@ By default the editor's node privileges are not evaluated, as in version 1.1.0. 
 `applyWithoutAuthorizationChecks: false`, applying a revision that would change a node the editor may not edit is
 refused as a whole, before anything is published. The CLI command always applies without authorization checks.
 
+Integrators who need a different behaviour during an apply can connect to the signals `revisionApplying` and
+`revisionApplied` of `NEOSidekick\Revisions\Service\RevisionService`.
+
 ## License
 
 Commercially licensed. Please contact office@neosidekick.com if you already want to use it, 
