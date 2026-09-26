@@ -741,14 +741,14 @@ class RevisionService
     }
 
     /**
-     * Compares the instant only, as revisions exported before #20 contain the UTC offset instead of the time zone
-     * and no fractions of a second
+     * Compares local time and UTC offset, the precision of the W3C strings in revisions exported before #20, so those
+     * stay quiet while a value re-saved in a zone that displays a different local time still counts as changed
      */
     protected function isSameDateTime($originalValue, $changedValue): bool
     {
         return $originalValue instanceof \DateTimeInterface
             && $changedValue instanceof \DateTimeInterface
-            && $originalValue->getTimestamp() === $changedValue->getTimestamp();
+            && $originalValue->format(\DateTimeInterface::W3C) === $changedValue->format(\DateTimeInterface::W3C);
     }
 
     /**
