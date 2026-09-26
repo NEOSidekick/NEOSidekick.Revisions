@@ -727,6 +727,9 @@
             const { status, conflicts } = error;
             if (status === 409) {
               resolveConflicts(revision, conflicts);
+            } else if (status === 403 || status === 422) {
+              const reason = status === 403 ? translate("error.revisionApplyDenied", "Not allowed to apply the revision") : translate("error.revisionNotApplicable", "Revision cannot be applied");
+              setMessage([reason, ...conflicts].join("\n"));
             } else {
               setMessage(translate("error.failedApplyingRevision"));
               console.error(error);
@@ -799,7 +802,7 @@
           }
         }, []);
         (0, import_react13.useEffect)(fetchRevisions, [documentNode]);
-        return /* @__PURE__ */ import_react13.default.createElement("div", null, message && /* @__PURE__ */ import_react13.default.createElement("div", { style: { color: "red", margin: "1rem 0" }, role: "alert" }, message), isLoading && /* @__PURE__ */ import_react13.default.createElement("div", null, /* @__PURE__ */ import_react13.default.createElement(import_react_ui_components5.Icon, { icon: "spinner", spin: true, color: "primaryBlue" }), " Loading \u2026"), selectedRevision ? /* @__PURE__ */ import_react13.default.createElement(
+        return /* @__PURE__ */ import_react13.default.createElement("div", null, message && /* @__PURE__ */ import_react13.default.createElement("div", { style: { color: "red", margin: "1rem 0", whiteSpace: "pre-line" }, role: "alert" }, message), isLoading && /* @__PURE__ */ import_react13.default.createElement("div", null, /* @__PURE__ */ import_react13.default.createElement(import_react_ui_components5.Icon, { icon: "spinner", spin: true, color: "primaryBlue" }), " Loading \u2026"), selectedRevision ? /* @__PURE__ */ import_react13.default.createElement(
           RevisionDetails_default,
           {
             revision: selectedRevision,

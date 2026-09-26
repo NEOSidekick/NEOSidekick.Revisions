@@ -98,6 +98,12 @@ const RevisionList: React.FC<Props> = ({
                 const { status, conflicts } = error;
                 if (status === 409) {
                     resolveConflicts(revision, conflicts);
+                } else if (status === 403 || status === 422) {
+                    const reason =
+                        status === 403
+                            ? translate('error.revisionApplyDenied', 'Not allowed to apply the revision')
+                            : translate('error.revisionNotApplicable', 'Revision cannot be applied');
+                    setMessage([reason, ...conflicts].join('\n'));
                 } else {
                     setMessage(translate('error.failedApplyingRevision'));
                     console.error(error);
@@ -183,7 +189,7 @@ const RevisionList: React.FC<Props> = ({
     return (
         <div>
             {message && (
-                <div style={{ color: 'red', margin: '1rem 0' }} role="alert">
+                <div style={{ color: 'red', margin: '1rem 0', whiteSpace: 'pre-line' }} role="alert">
                     {message}
                 </div>
             )}
