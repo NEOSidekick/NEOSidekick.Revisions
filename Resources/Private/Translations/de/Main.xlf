@@ -136,6 +136,14 @@
                 <source>Failed to apply revision</source>
                 <target>Revision konnte nicht angewandt werden</target>
             </trans-unit>
+            <trans-unit id="error.revisionNotApplicable">
+                <source>Revision cannot be applied</source>
+                <target>Revision kann nicht angewandt werden</target>
+            </trans-unit>
+            <trans-unit id="error.revisionApplyDenied">
+                <source>Not allowed to apply the revision</source>
+                <target>Keine Berechtigung, diese Revision anzuwenden</target>
+            </trans-unit>
 
             <trans-unit id="confirm.applyRevision">
                 <source>Do you want to apply revision {revisionDate} by {creator}?</source>
