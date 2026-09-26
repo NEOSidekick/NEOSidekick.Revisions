@@ -145,10 +145,13 @@ class NodeExportService extends \Neos\ContentRepository\Domain\Service\ImportExp
      * @inheritDoc
      *
      * Adds special handling for boolean properties as false values are being dropped during export (see https://github.com/code-q-web-factory/NEOSidekick.Revisions/issues/13)
+     * and for DateTime properties as the core export drops their time zone (see https://github.com/NEOSidekick/NEOSidekick.Revisions/issues/20)
      */
     protected function writeConvertedElement(array &$data, $propertyName, $elementName = null, $declaredPropertyType = null): void
     {
-        if ($declaredPropertyType !== 'boolean') {
+        if ($declaredPropertyType === 'DateTime' && !empty($data[$propertyName])) {
+            $this->writeDateTimeElement($data, $propertyName, $elementName);
+        } else if ($declaredPropertyType !== 'boolean') {
             parent::writeConvertedElement($data, $propertyName, $elementName, $declaredPropertyType);
         } else if (array_key_exists($propertyName, $data) && $data[$propertyName] !== null) {
             $propertyValue = $data[$propertyName];
@@ -157,6 +160,35 @@ class NodeExportService extends \Neos\ContentRepository\Domain\Service\ImportExp
             $this->xmlWriter->text($propertyValue ? '1' : '0');
             $this->xmlWriter->endElement();
         }
+    }
+
+    /**
+     * Writes the value in Flow's JSON persistence format. The core import reads elements of class "DateTime" as W3C
+     * strings, but maps JSON-encoded objects of other classes with the DateTimeConverter, which keeps the time zone.
+     */
+    protected function writeDateTimeElement(array &$data, $propertyName, $elementName): void
+    {
+        try {
+            $dateTime = $this->propertyMapper->convert($data[$propertyName], \DateTimeImmutable::class);
+        } catch (\Exception $exception) {
+            $dateTime = null;
+        }
+        if (!$dateTime instanceof \DateTimeInterface) {
+            // Leaves logging the conversion error to the core export
+            parent::writeConvertedElement($data, $propertyName, $elementName, 'DateTime');
+            return;
+        }
+
+        $this->xmlWriter->startElement($elementName ?: $propertyName);
+        $this->xmlWriter->writeAttribute('__type', 'object');
+        $this->xmlWriter->writeAttribute('__classname', \DateTimeImmutable::class);
+        $this->xmlWriter->writeAttribute('__encoding', 'json');
+        $this->xmlWriter->text(json_encode([
+            'date' => $dateTime->format('Y-m-d H:i:s.u'),
+            'timezone' => $dateTime->format('e'),
+            'dateFormat' => 'Y-m-d H:i:s.u',
+        ]));
+        $this->xmlWriter->endElement();
     }
 
 }

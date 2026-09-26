@@ -664,7 +664,7 @@ class RevisionService
             $changedPropertyValue = $importedProperties[$propertyName] ?? '';
             $diff = '';
 
-            if ($changedPropertyValue === $originalPropertyValue && !$existingNode->isRemoved()) {
+            if (($changedPropertyValue === $originalPropertyValue || $this->isSameDateTime($originalPropertyValue, $changedPropertyValue)) && !$existingNode->isRemoved()) {
                 continue;
             }
 
@@ -736,13 +736,24 @@ class RevisionService
         if ($value instanceof NodeInterface) {
             return 'node';
         }
-        if ($value instanceof \DateTime) {
+        if ($value instanceof \DateTimeInterface) {
             return 'datetime';
         }
         if (is_array($value)) {
             return 'array';
         }
         return 'text';
+    }
+
+    /**
+     * Compares local time and UTC offset, the precision of the W3C strings in revisions exported before #20, so those
+     * stay quiet while a value re-saved in a zone that displays a different local time still counts as changed
+     */
+    protected function isSameDateTime($originalValue, $changedValue): bool
+    {
+        return $originalValue instanceof \DateTimeInterface
+            && $changedValue instanceof \DateTimeInterface
+            && $originalValue->format(\DateTimeInterface::W3C) === $changedValue->format(\DateTimeInterface::W3C);
     }
 
     /**
