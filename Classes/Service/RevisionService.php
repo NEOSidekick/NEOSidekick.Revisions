@@ -184,7 +184,7 @@ class RevisionService
         $this->revisionRepository->update($revision);
     }
 
-    protected function createRevisionInternal(NodeInterface $node, string $label = null, Revision $appliedRevision = null): ?Revision
+    protected function createRevisionInternal(NodeInterface $node, string $label = null): ?Revision
     {
         $xmlWriter = $this->nodeExportService->export($node->getPath());
         $content = $xmlWriter->flush();
@@ -199,9 +199,6 @@ class RevisionService
             $enableCompression,
             array_key_exists($node->getIdentifier(), self::$movedNodes)
         );
-        if ($appliedRevision !== null) {
-            $revision->setAppliedRevision($appliedRevision);
-        }
 
         try {
             $this->revisionRepository->add($revision);
@@ -925,7 +922,10 @@ class RevisionService
                     $this->logger->info(sprintf('Removing revisions for deleted node %s', $nodeToUse->getContextPath()));
                     // TODO: Remove revisions
                 } else {
-                    $this->createRevisionInternal($nodeToUse, null, self::$appliedRevisions[$identifier] ?? null);
+                    $revision = $this->createRevision($nodeToUse);
+                    if ($revision !== null && isset(self::$appliedRevisions[$identifier])) {
+                        $revision->setAppliedRevision(self::$appliedRevisions[$identifier]);
+                    }
                 }
             }
         }
