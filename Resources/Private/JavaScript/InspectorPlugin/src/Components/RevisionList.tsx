@@ -151,7 +151,9 @@ const RevisionList: React.FC<Props> = ({
                     addFlashMessage(
                         translate('success.revisionUpdated'),
                         translate('success.revisionUpdated.message', 'Revision {label} by "{creator}" updated.', {
-                            label: formatRevisionLabel(selectedRevision, translate) || formatRevisionDate(selectedRevision),
+                            label:
+                                formatRevisionLabel(selectedRevision, translate) ||
+                                formatRevisionDate(selectedRevision),
                             creator: selectedRevision.creator,
                         }),
                         'success'

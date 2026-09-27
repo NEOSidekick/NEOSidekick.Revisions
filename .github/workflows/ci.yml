@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  php-lint:
+    name: PHP lint (${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: ['7.4', '8.3']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+      - name: Lint
+        run: find Classes Migrations -name '*.php' -print0 | xargs -0 -n1 php -l
+
+  phpstan:
+    name: PHPStan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: package
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+      - name: Install Neos with the package as a path repository
+        run: |
+          mkdir distribution
+          cd distribution
+          composer init --no-interaction --name=ci/distribution --type=project --stability=dev
+          composer config prefer-stable true
+          composer config allow-plugins.neos/composer-plugin true
+          composer config repositories.package path ../package
+          composer require --no-interaction --no-progress 'neosidekick/revisions:*@dev' 'phpstan/phpstan:2.2.16'
+      - name: Analyse
+        working-directory: distribution
+        run: vendor/bin/phpstan analyse --configuration ../package/phpstan.neon --no-progress
+
+  composer-validate:
+    name: Composer manifest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+      - name: Validate
+        run: composer validate --no-check-publish
+
+  xliff:
+    name: Translation files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install xmllint
+        run: command -v xmllint || (sudo apt-get update && sudo apt-get install --yes libxml2-utils)
+      - name: Check that every XLIFF file is well-formed
+        run: find Resources/Private/Translations -name '*.xlf' -print0 | xargs -0 xmllint --noout
+
+  inspector-build:
+    name: Inspector build reproducibility
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Build
+        working-directory: Resources/Private/JavaScript/InspectorPlugin
+        run: |
+          node --version
+          npm install --no-package-lock --no-audit --no-fund
+          node build.js
+      - name: Compare with the committed bundle
+        run: git diff --text --exit-code -- Resources/Public/Assets/Plugin.js
+
+  eslint:
+    name: ESLint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: npm install --no-package-lock --no-audit --no-fund
+      - run: npm run lint

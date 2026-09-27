@@ -26,7 +26,9 @@ const VisualDiff: React.FC<VisualDiffProps> = ({ diff }) => {
                 ))
             )}
         </>
-    ) : <p>Cannot render visual diff</p>;
+    ) : (
+        <p>Cannot render visual diff</p>
+    );
 };
 
 export default React.memo(VisualDiff);

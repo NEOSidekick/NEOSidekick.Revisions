@@ -10,11 +10,13 @@ const AssetPropertyDiff: React.FC<DiffProps> = ({ encodedAssetData }) => {
     if (encodedAssetData) {
         try {
             assetData = JSON.parse(encodedAssetData);
-        } catch (e) {}
+        } catch (e) {
+            // Shown as plain text below
+        }
     }
 
     return assetData?.src ? (
-        <a href={assetData.src} target="_blank" title={assetData.alt}>
+        <a href={assetData.src} target="_blank" rel="noreferrer" title={assetData.alt}>
             {assetData.filename}
         </a>
     ) : (

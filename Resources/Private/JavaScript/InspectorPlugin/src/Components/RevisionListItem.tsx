@@ -47,10 +47,14 @@ const RevisionListItem: React.FC<RevisionListItemProps> = ({
                     hoverStyle="success"
                     size="small"
                     disabled={!allowApply}
-                    title={allowApply ? translate('action.apply.title', 'Apply revision {revisionDate} by {creator}', {
-                        revisionDate: formatRevisionDate(revision),
-                        creator: revision.creator,
-                    }) : translate('action.apply.disabled.title', 'This revision cannot be applied')}
+                    title={
+                        allowApply
+                            ? translate('action.apply.title', 'Apply revision {revisionDate} by {creator}', {
+                                  revisionDate: formatRevisionDate(revision),
+                                  creator: revision.creator,
+                              })
+                            : translate('action.apply.disabled.title', 'This revision cannot be applied')
+                    }
                 />
                 <IconButton
                     onClick={() => setSelectedRevision(revision)}

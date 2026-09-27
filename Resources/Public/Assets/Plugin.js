@@ -297,7 +297,7 @@
           } catch (e) {
           }
         }
-        return assetData?.src ? /* @__PURE__ */ import_react2.default.createElement("a", { href: assetData.src, target: "_blank", title: assetData.alt }, assetData.filename) : /* @__PURE__ */ import_react2.default.createElement("p", null, encodedAssetData);
+        return assetData?.src ? /* @__PURE__ */ import_react2.default.createElement("a", { href: assetData.src, target: "_blank", rel: "noreferrer", title: assetData.alt }, assetData.filename) : /* @__PURE__ */ import_react2.default.createElement("p", null, encodedAssetData);
       };
       AssetPropertyDiff_default = import_react2.default.memo(AssetPropertyDiff);
     }
@@ -560,32 +560,51 @@
         (0, import_react11.useEffect)(() => {
           fetchChanges();
         }, [revision]);
-        return /* @__PURE__ */ import_react11.default.createElement("div", { style: { padding: "1rem", height: "100%", display: "flex", flexDirection: "column", position: "absolute", inset: "0" } }, /* @__PURE__ */ import_react11.default.createElement("h1", { style: { marginBottom: "2rem", fontSize: "1.5em", lineHeight: 1.3 } }, translate("diff.header", "The revision contains the following changes", { version, date: formatRevisionDate(revision) })), revision.isMoved && /* @__PURE__ */ import_react11.default.createElement("div", { style: { marginBottom: "2rem", fontWeight: "bold" } }, /* @__PURE__ */ import_react11.default.createElement(import_react_ui_components3.Icon, { icon: "exclamation-triangle", style: { marginRight: "0.5rem", color: "#ff8700" } }), translate("diff.moved", "The document was moved to another location.")), /* @__PURE__ */ import_react11.default.createElement("div", { style: { overflow: "auto" } }, isLoading ? /* @__PURE__ */ import_react11.default.createElement("div", null, /* @__PURE__ */ import_react11.default.createElement(import_react_ui_components3.Icon, { icon: "spinner", spin: true, color: "primaryBlue" }), " Loading \u2026") : changes && Object.keys(changes).length > 0 ? Object.keys(changes).map(
-          (nodeIdentifier) => Object.keys(changes[nodeIdentifier]).map((dimensionHash) => /* @__PURE__ */ import_react11.default.createElement("div", { key: nodeIdentifier, style: { marginBottom: "1rem" } }, /* @__PURE__ */ import_react11.default.createElement(
-            ErrorBoundary,
-            {
-              text: `Diff for node ${changes[nodeIdentifier][dimensionHash].node?.label || nodeIdentifier} could not be rendered. Please check the logs.`
-            },
-            /* @__PURE__ */ import_react11.default.createElement(
-              ContentChangeDiff_default,
-              {
-                nodeChanges: changes[nodeIdentifier][dimensionHash],
-                translate,
-                contentDimensions
-              }
-            )
-          )))
-        ) : /* @__PURE__ */ import_react11.default.createElement("p", null, message ? message : translate("diff.empty", "No changes have been found"))), /* @__PURE__ */ import_react11.default.createElement("div", { style: { marginTop: "2rem", display: "flex", justifyContent: "space-between" } }, /* @__PURE__ */ import_react11.default.createElement(import_react_ui_components3.Button, { style: "warn", onClick: onClose }, translate("action.close")), /* @__PURE__ */ import_react11.default.createElement(
-          import_react_ui_components3.Button,
+        return /* @__PURE__ */ import_react11.default.createElement(
+          "div",
           {
-            style: "success",
-            onClick: () => applyRevision(revision),
-            disabled: isLoading || Object.keys(changes).length === 0
+            style: {
+              padding: "1rem",
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+              position: "absolute",
+              inset: "0"
+            }
           },
-          /* @__PURE__ */ import_react11.default.createElement(import_react_ui_components3.Icon, { icon: "check" }),
-          " ",
-          translate("action.apply")
-        )));
+          /* @__PURE__ */ import_react11.default.createElement("h1", { style: { marginBottom: "2rem", fontSize: "1.5em", lineHeight: 1.3 } }, translate("diff.header", "The revision contains the following changes", {
+            version,
+            date: formatRevisionDate(revision)
+          })),
+          revision.isMoved && /* @__PURE__ */ import_react11.default.createElement("div", { style: { marginBottom: "2rem", fontWeight: "bold" } }, /* @__PURE__ */ import_react11.default.createElement(import_react_ui_components3.Icon, { icon: "exclamation-triangle", style: { marginRight: "0.5rem", color: "#ff8700" } }), translate("diff.moved", "The document was moved to another location.")),
+          /* @__PURE__ */ import_react11.default.createElement("div", { style: { overflow: "auto" } }, isLoading ? /* @__PURE__ */ import_react11.default.createElement("div", null, /* @__PURE__ */ import_react11.default.createElement(import_react_ui_components3.Icon, { icon: "spinner", spin: true, color: "primaryBlue" }), " Loading \u2026") : changes && Object.keys(changes).length > 0 ? Object.keys(changes).map(
+            (nodeIdentifier) => Object.keys(changes[nodeIdentifier]).map((dimensionHash) => /* @__PURE__ */ import_react11.default.createElement("div", { key: nodeIdentifier, style: { marginBottom: "1rem" } }, /* @__PURE__ */ import_react11.default.createElement(
+              ErrorBoundary,
+              {
+                text: `Diff for node ${changes[nodeIdentifier][dimensionHash].node?.label || nodeIdentifier} could not be rendered. Please check the logs.`
+              },
+              /* @__PURE__ */ import_react11.default.createElement(
+                ContentChangeDiff_default,
+                {
+                  nodeChanges: changes[nodeIdentifier][dimensionHash],
+                  translate,
+                  contentDimensions
+                }
+              )
+            )))
+          ) : /* @__PURE__ */ import_react11.default.createElement("p", null, message ? message : translate("diff.empty", "No changes have been found"))),
+          /* @__PURE__ */ import_react11.default.createElement("div", { style: { marginTop: "2rem", display: "flex", justifyContent: "space-between" } }, /* @__PURE__ */ import_react11.default.createElement(import_react_ui_components3.Button, { style: "warn", onClick: onClose }, translate("action.close")), /* @__PURE__ */ import_react11.default.createElement(
+            import_react_ui_components3.Button,
+            {
+              style: "success",
+              onClick: () => applyRevision(revision),
+              disabled: isLoading || Object.keys(changes).length === 0
+            },
+            /* @__PURE__ */ import_react11.default.createElement(import_react_ui_components3.Icon, { icon: "check" }),
+            " ",
+            translate("action.apply")
+          ))
+        );
       };
       RevisionDiff_default = import_react11.default.memo(RevisionDiff);
     }
