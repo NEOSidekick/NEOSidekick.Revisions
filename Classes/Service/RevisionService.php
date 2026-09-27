@@ -598,7 +598,7 @@ class RevisionService
         if ($nodeType->isAbstract()) {
             return ['id' => 'nodeTypeMissing', 'message' => sprintf('Node type "%s" of node "%s" is abstract', $nodeData['nodeType'], $nodeData['path'])];
         }
-        $nodeTypeNamesByPath[$nodeData['path']] = $nodeData['nodeType'];
+        $nodeTypeNamesByPath[(string)$nodeData['path']] = (string)$nodeData['nodeType'];
         if ($existingNode !== null && $existingNode->getPath() === $nodeData['path'] && $existingNode->getNodeType()->getName() === $nodeData['nodeType']) {
             return null;
         }
