@@ -10,7 +10,9 @@ const ImagePropertyDiff: React.FC<DiffProps> = ({ encodedImageData }) => {
     if (encodedImageData) {
         try {
             imageData = JSON.parse(encodedImageData);
-        } catch (e) {}
+        } catch (e) {
+            // Shown as plain text below
+        }
     }
 
     return imageData?.src ? (

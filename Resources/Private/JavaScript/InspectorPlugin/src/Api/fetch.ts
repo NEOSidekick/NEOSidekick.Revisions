@@ -65,7 +65,10 @@ class ApplyError extends Error {
     }
 }
 
-export default function fetchFromBackend<T = {}>(props: FetchProps, setLoadingState: (state) => void): Promise<T> {
+export default function fetchFromBackend<T = Record<string, unknown>>(
+    props: FetchProps,
+    setLoadingState: (state) => void
+): Promise<T> {
     setLoadingState(true);
 
     // Cannot use URL object here due to missing Safari support

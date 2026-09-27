@@ -71,5 +71,5 @@ type NodeChanges = {
 type ChangeList = {
     [nodeIdentifier: string]: {
         [dimensionHash: string]: NodeChanges;
-    }
+    };
 };

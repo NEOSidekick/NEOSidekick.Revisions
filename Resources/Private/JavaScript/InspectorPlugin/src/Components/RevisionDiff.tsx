@@ -31,16 +31,18 @@ const RevisionDiff: React.FC<RevisionDiffProps> = ({
 
     const version = useMemo(
         () =>
-            revision ? formatRevisionLabel(revision, translate) ||
-            translate('revision.label', `By ${revision.creator}`, {
-                creator: revision.creator,
-            }) : '',
+            revision
+                ? formatRevisionLabel(revision, translate) ||
+                  translate('revision.label', `By ${revision.creator}`, {
+                      creator: revision.creator,
+                  })
+                : '',
         [revision]
     );
 
     const fetchChanges = useCallback(() => {
         setIsLoading(true);
-        fetchFromBackend<{ method: 'post', diff: ChangeList }>(
+        fetchFromBackend<{ method: 'post'; diff: ChangeList }>(
             { action: 'getDiff', params: { node: documentNode, revision } },
             setIsLoading
         )
@@ -56,9 +58,21 @@ const RevisionDiff: React.FC<RevisionDiffProps> = ({
     }, [revision]);
 
     return (
-        <div style={{ padding: '1rem', height: '100%', display: 'flex', flexDirection: 'column', position: 'absolute', inset: '0' }}>
+        <div
+            style={{
+                padding: '1rem',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                position: 'absolute',
+                inset: '0',
+            }}
+        >
             <h1 style={{ marginBottom: '2rem', fontSize: '1.5em', lineHeight: 1.3 }}>
-                {translate('diff.header', 'The revision contains the following changes', { version, date: formatRevisionDate(revision) })}
+                {translate('diff.header', 'The revision contains the following changes', {
+                    version,
+                    date: formatRevisionDate(revision),
+                })}
             </h1>
             {revision.isMoved && (
                 <div style={{ marginBottom: '2rem', fontWeight: 'bold' }}>
@@ -72,20 +86,24 @@ const RevisionDiff: React.FC<RevisionDiffProps> = ({
                         <Icon icon="spinner" spin color="primaryBlue" /> Loading …
                     </div>
                 ) : changes && Object.keys(changes).length > 0 ? (
-                    Object.keys(changes).map((nodeIdentifier) => Object.keys(changes[nodeIdentifier]).map((dimensionHash) => (
-                        <div key={nodeIdentifier} style={{ marginBottom: '1rem' }}>
-                            <ErrorBoundary
-                                text={`Diff for node ${changes[nodeIdentifier][dimensionHash].node?.label || nodeIdentifier} could not be rendered. Please check the logs.`}
-                            >
-                                <ContentChangeDiff
-                                    nodeChanges={changes[nodeIdentifier][dimensionHash]}
-                                    translate={translate}
-                                    contentDimensions={contentDimensions}
-                                />
-                            </ErrorBoundary>
-                        </div>
-                    ))
-                )) : (
+                    Object.keys(changes).map((nodeIdentifier) =>
+                        Object.keys(changes[nodeIdentifier]).map((dimensionHash) => (
+                            <div key={nodeIdentifier} style={{ marginBottom: '1rem' }}>
+                                <ErrorBoundary
+                                    text={`Diff for node ${
+                                        changes[nodeIdentifier][dimensionHash].node?.label || nodeIdentifier
+                                    } could not be rendered. Please check the logs.`}
+                                >
+                                    <ContentChangeDiff
+                                        nodeChanges={changes[nodeIdentifier][dimensionHash]}
+                                        translate={translate}
+                                        contentDimensions={contentDimensions}
+                                    />
+                                </ErrorBoundary>
+                            </div>
+                        ))
+                    )
+                ) : (
                     <p>{message ? message : translate('diff.empty', 'No changes have been found')}</p>
                 )}
             </div>
