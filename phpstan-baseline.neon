@@ -1,0 +1,79 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^PHPDoc tag @return has invalid value \(array\[Revision, NodeInterface\]\)\: Unexpected token "\[", expected TOKEN_HORIZONTAL_WS at offset 24 on line 2$#'
+			identifier: phpDoc.parseError
+			count: 1
+			path: Classes/Command/RevisionCommandController.php
+
+		-
+			message: '#^Call to function is_string\(\) with string will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 2
+			path: Classes/Domain/Model/Revision.php
+
+		-
+			message: '#^If condition is always false\.$#'
+			identifier: if.alwaysFalse
+			count: 2
+			path: Classes/Domain/Model/Revision.php
+
+		-
+			message: '#^Property NEOSidekick\\Revisions\\Domain\\Model\\Revision\:\:\$creationDateTime \(DateTime\) does not accept Neos\\Flow\\Utility\\Now\.$#'
+			identifier: assign.propertyType
+			count: 1
+			path: Classes/Domain/Model/Revision.php
+
+		-
+			message: '#^Property NEOSidekick\\Revisions\\Domain\\Model\\Revision\:\:\$label \(string\) on left side of \?\? is not nullable\.$#'
+			identifier: nullCoalesce.property
+			count: 1
+			path: Classes/Domain/Model/Revision.php
+
+		-
+			message: '#^Call to an undefined method Neos\\ContentRepository\\Domain\\Model\\NodeInterface\:\:getCreationDateTime\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: Classes/Service/RevisionService.php
+
+		-
+			message: '#^Call to an undefined method Neos\\ContentRepository\\Domain\\Model\\NodeInterface\:\:getLastModificationDateTime\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: Classes/Service/RevisionService.php
+
+		-
+			message: '#^Call to an undefined method Neos\\ContentRepository\\Domain\\Model\\NodeInterface\:\:getLastPublicationDateTime\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: Classes/Service/RevisionService.php
+
+		-
+			message: '#^Left side of && is always true\.$#'
+			identifier: booleanAnd.leftAlwaysTrue
+			count: 3
+			path: Classes/Service/RevisionService.php
+
+		-
+			message: '#^Method NEOSidekick\\Revisions\\Service\\RevisionService\:\:generateNodeDiff\(\) should return array\{type\: string, node\: array, changes\: array\} but returns array\{\}\.$#'
+			identifier: return.type
+			count: 1
+			path: Classes/Service/RevisionService.php
+
+		-
+			message: '#^Method Neos\\ContentRepository\\Domain\\Model\\NodeInterface\:\:moveInto\(\) invoked with 2 parameters, 1 required\.$#'
+			identifier: arguments.count
+			count: 1
+			path: Classes/Service/RevisionService.php
+
+		-
+			message: '#^Negated boolean expression is always false\.$#'
+			identifier: booleanNot.alwaysFalse
+			count: 1
+			path: Classes/Service/RevisionService.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between Neos\\ContentRepository\\Domain\\Model\\NodeInterface and null will always evaluate to false\.$#'
+			identifier: identical.alwaysFalse
+			count: 2
+			path: Classes/Service/RevisionService.php

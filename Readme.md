@@ -103,6 +103,50 @@ refused as a whole, before anything is published. The CLI command always applies
 Integrators who need a different behaviour during an apply can connect to the signals `revisionApplying` and
 `revisionApplied` of `NEOSidekick\Revisions\Service\RevisionService`.
 
+## Checks
+
+Every pull request and every push to `main` runs three checks in GitHub Actions (`.github/workflows/ci.yml`). None of
+them needs a database. To run them locally:
+
+PHP lint, run in CI with PHP 7.4 and 8.3:
+
+```console
+find Classes Migrations -name '*.php' -print0 | xargs -0 -n1 php -l
+```
+
+PHPStan with the configuration and baseline of this repository, in a throwaway Neos distribution that contains the
+package (here next to a checkout in `NEOSidekick.Revisions`). Only findings that are not in the baseline fail:
+
+```console
+mkdir revisions-phpstan && cd revisions-phpstan
+composer init --no-interaction --name=ci/distribution --type=project --stability=dev
+composer config prefer-stable true
+composer config allow-plugins.neos/composer-plugin true
+composer config repositories.package path ../NEOSidekick.Revisions
+composer require 'neosidekick/revisions:*@dev' 'phpstan/phpstan:^2.1'
+vendor/bin/phpstan analyse --configuration ../NEOSidekick.Revisions/phpstan.neon
+```
+
+A finding that no longer occurs has to be removed from the baseline as well. Regenerate it with
+`--generate-baseline ../NEOSidekick.Revisions/phpstan-baseline.neon` added to the last command.
+
+Inspector build, with the Node version from `.nvmrc`. The committed `Plugin.js` must be exactly what the source builds
+to:
+
+```console
+cd Resources/Private/JavaScript/InspectorPlugin
+npm install --no-package-lock
+node build.js
+git diff --exit-code -- ../../../Public/Assets/Plugin.js
+```
+
+ESLint on the inspector source, from the repository root:
+
+```console
+npm install --no-package-lock
+npm run lint
+```
+
 ## License
 
 Commercially licensed. Please contact office@neosidekick.com if you already want to use it, 
