@@ -52,7 +52,23 @@ class RevisionsController extends ActionController
             $this->throwStatus(404, $this->translate('error.nodeNotFound', 'Page not found'));
         }
 
-        $revisions = array_map(static function (Revision $revision) {
+        $nodeRevisions = $this->revisionService->getRevisions($node);
+        $revisionsByIdentifier = [];
+        foreach ($nodeRevisions as $revision) {
+            $revisionsByIdentifier[$revision->getIdentifier()] = $revision;
+        }
+
+        $revisions = array_map(static function (Revision $revision) use ($revisionsByIdentifier) {
+            $appliedRevision = null;
+            if ($revision->getAppliedRevisionIdentifier() !== null) {
+                // The applied revision is one of the same node's revisions, as long as it still exists
+                $source = $revisionsByIdentifier[$revision->getAppliedRevisionIdentifier()] ?? null;
+                $appliedRevision = [
+                    'identifier' => $revision->getAppliedRevisionIdentifier(),
+                    'label' => $source ? $source->getLabel() : '',
+                    'creationDateTime' => $revision->getAppliedRevisionCreationDateTime(),
+                ];
+            }
             return [
                 'identifier' => $revision->getIdentifier(),
                 'label' => $revision->getLabel(),
@@ -61,8 +77,9 @@ class RevisionsController extends ActionController
                 'creationDateTime' => $revision->getCreationDateTime(),
                 'isEmpty' => $revision->isEmpty(),
                 'isMoved' => $revision->isMoved(),
+                'appliedRevision' => $appliedRevision,
             ];
-        }, $this->revisionService->getRevisions($node));
+        }, $nodeRevisions);
 
         $this->view->assign('value', [
             'revisions' => $revisions,

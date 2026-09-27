@@ -93,10 +93,19 @@ class RevisionCommandController extends CommandController
             $this->outputLine('No revisions found');
             $this->quit(1);
         } else {
-            $rows = array_map(function (Revision $revision) {
+            $revisionsByIdentifier = [];
+            foreach ($result as $revision) {
+                $revisionsByIdentifier[$revision->getIdentifier()] = $revision;
+            }
+            $rows = array_map(function (Revision $revision) use ($revisionsByIdentifier) {
+                $label = $revision->getLabel();
+                if ($label === '' && $revision->getAppliedRevisionIdentifier() !== null) {
+                    $source = $revisionsByIdentifier[$revision->getAppliedRevisionIdentifier()] ?? null;
+                    $label = sprintf('Applied revision %s', $source && $source->getLabel() !== '' ? $source->getLabel() : $revision->getAppliedRevisionCreationDateTime()->format('Y-m-d H:i:s'));
+                }
                 return [
                     $revision->getCreationDateTime()->format('Y-m-d H:i:s'),
-                    $revision->getLabel(),
+                    $label,
                     $revision->getCreator(),
                     $this->persistenceManager->getIdentifierByObject($revision),
                 ];
