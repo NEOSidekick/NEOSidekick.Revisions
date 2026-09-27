@@ -358,17 +358,20 @@
             style: "wide",
             actions: [
               /* @__PURE__ */ import_react.default.createElement(import_react_ui_components.Button, { key: "cancel", style: "lighter", hoverStyle: "brand", onClick: onCancel }, translate("resolution.cancel", "Cancel")),
-              /* @__PURE__ */ import_react.default.createElement(
-                import_react_ui_components.Button,
-                {
-                  key: "apply",
-                  style: "success",
-                  hoverStyle: "success",
-                  disabled: !isComplete || isLoading,
-                  onClick: apply
-                },
-                translate("resolution.apply", "Apply revision")
-              )
+              // No choice in the dialog fixes an error, so applying again would only repeat it
+              ...errors.length > 0 ? [] : [
+                /* @__PURE__ */ import_react.default.createElement(
+                  import_react_ui_components.Button,
+                  {
+                    key: "apply",
+                    style: "success",
+                    hoverStyle: "success",
+                    disabled: !isComplete || isLoading,
+                    onClick: apply
+                  },
+                  translate("resolution.apply", "Apply revision")
+                )
+              ]
             ]
           },
           /* @__PURE__ */ import_react.default.createElement("div", { style: { padding: "16px" } }, errors.length > 0 && /* @__PURE__ */ import_react.default.createElement("div", { style: { color: "red", marginBottom: "1rem", whiteSpace: "pre-line" }, role: "alert" }, [translate("resolution.errors", "The revision cannot be applied like this:"), ...errors].join(

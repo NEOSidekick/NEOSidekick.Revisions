@@ -105,15 +105,20 @@ const ResolutionDialog: React.FC<ResolutionDialogProps> = ({
                 <Button key="cancel" style="lighter" hoverStyle="brand" onClick={onCancel}>
                     {translate('resolution.cancel', 'Cancel')}
                 </Button>,
-                <Button
-                    key="apply"
-                    style="success"
-                    hoverStyle="success"
-                    disabled={!isComplete || isLoading}
-                    onClick={apply}
-                >
-                    {translate('resolution.apply', 'Apply revision')}
-                </Button>,
+                // No choice in the dialog fixes an error, so applying again would only repeat it
+                ...(errors.length > 0
+                    ? []
+                    : [
+                          <Button
+                              key="apply"
+                              style="success"
+                              hoverStyle="success"
+                              disabled={!isComplete || isLoading}
+                              onClick={apply}
+                          >
+                              {translate('resolution.apply', 'Apply revision')}
+                          </Button>,
+                      ]),
             ]}
         >
             <div style={{ padding: '16px' }}>
