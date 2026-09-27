@@ -190,9 +190,6 @@
     if (props.params["label"]) {
       url += `&label=${encodeURIComponent(props.params["label"])}`;
     }
-    if (props.params["force"]) {
-      url += `&force=${encodeURIComponent(props.params["force"])}`;
-    }
     return fetchWithErrorHandling.withCsrfToken((csrfToken) => ({
       url,
       method: props.action === "get" ? "GET" : "POST",
@@ -200,7 +197,9 @@
       headers: {
         "X-Flow-Csrftoken": csrfToken,
         "Content-Type": "application/json"
-      }
+      },
+      // Flow maps a JSON body to the action arguments
+      body: props.action === "apply" ? JSON.stringify({ resolutions: props.params.resolutions }) : void 0
     })).then(async (response) => {
       if (!response) {
         return;
@@ -208,12 +207,12 @@
       if (response.status >= 400 && response.status < 600) {
         const { message } = response;
         if (props.action === "apply") {
-          let conflicts = [];
+          let body = { rows: [], errors: [] };
           try {
-            conflicts = await response.json();
+            body = { ...body, ...await response.json() };
           } catch (e) {
           }
-          throw new ApplyError(message, response.status, conflicts);
+          throw new ApplyError(message, response.status, body.rows, body.errors);
         }
         throw new Error(message);
       }
@@ -227,17 +226,21 @@
     "src/Api/fetch.ts"() {
       init_neos_ui_backend_connector();
       ApplyError = class extends Error {
-        constructor(message, status, conflicts) {
+        constructor(message, status, rows, errors) {
           super(message);
           this.name = "ApplyError";
           this._status = status;
-          this._conflicts = conflicts;
+          this._rows = rows;
+          this._errors = errors;
         }
         get status() {
           return this._status;
         }
-        get conflicts() {
-          return this._conflicts;
+        get rows() {
+          return this._rows;
+        }
+        get errors() {
+          return this._errors;
         }
       };
     }
@@ -269,26 +272,152 @@
     }
   });
 
-  // src/Components/RevisionDetails.tsx
-  var import_react, import_react_ui_components, RevisionDetails, RevisionDetails_default;
-  var init_RevisionDetails = __esm({
-    "src/Components/RevisionDetails.tsx"() {
+  // src/Components/ResolutionDialog.tsx
+  var import_react, import_react_ui_components, getPreviousChoice, ResolutionDialog, ResolutionDialog_default;
+  var init_ResolutionDialog = __esm({
+    "src/Components/ResolutionDialog.tsx"() {
       import_react = __toESM(require_react());
       import_react_ui_components = __toESM(require_react_ui_components());
+      getPreviousChoice = (resolutions, identifier) => Object.keys(resolutions[identifier] || {}).find(
+        (choice) => resolutions[identifier][choice]
+      );
+      ResolutionDialog = ({
+        rows,
+        errors,
+        previousResolutions,
+        isLoading,
+        translate,
+        onApply,
+        onCancel
+      }) => {
+        const [choices, setChoices] = (0, import_react.useState)(
+          () => rows.reduce((initialChoices, row) => {
+            const choice = row.resolution || getPreviousChoice(previousResolutions, row.identifier);
+            return choice && row.choices.includes(choice) ? { ...initialChoices, [row.identifier]: choice } : initialChoices;
+          }, {})
+        );
+        const isComplete = rows.length > 0 && rows.every((row) => choices[row.identifier]);
+        const apply = () => onApply(
+          rows.reduce(
+            (resolutions, row) => ({ ...resolutions, [row.identifier]: { [choices[row.identifier]]: true } }),
+            {}
+          )
+        );
+        const describeProblem = (row, problem) => {
+          switch (problem.id) {
+            case "nodeTypeMissing":
+              return translate("resolution.problem.nodeTypeMissing", 'The node type "{nodeType}" no longer exists.', {
+                nodeType: row.nodeType.name
+              });
+            case "nodeTypeNotAllowed":
+              return translate(
+                "resolution.problem.nodeTypeNotAllowed",
+                'The node type "{nodeType}" is no longer allowed here.',
+                { nodeType: row.nodeType.label }
+              );
+            case "parentMissing":
+              return translate(
+                "resolution.problem.parentMissing",
+                "The place of this content in the revision no longer exists."
+              );
+            case "movedAway":
+              return row.document ? translate("resolution.problem.movedAway", 'Moved to the page "{document}" since the revision.', {
+                document: row.document.label
+              }) : translate(
+                "resolution.problem.movedAway.unknown",
+                "Moved to an unknown place since the revision."
+              );
+            case "movedHere":
+              return translate("resolution.problem.movedHere", "Moved to this page since the revision.");
+            default:
+              return problem.message;
+          }
+        };
+        const labelChoice = (row, choice) => {
+          if (choice === "__moveBack") {
+            return translate("resolution.choice.moveBack", "Move back");
+          }
+          if (choice === "__remove") {
+            return translate("resolution.choice.remove", "Remove");
+          }
+          if (row.problems.some((problem) => problem.id === "movedAway")) {
+            return translate("resolution.choice.leaveThere", "Leave there");
+          }
+          if (row.problems.some((problem) => problem.id === "movedHere")) {
+            return translate("resolution.choice.keep", "Keep");
+          }
+          return translate("resolution.choice.skip", "Skip");
+        };
+        return /* @__PURE__ */ import_react.default.createElement(
+          import_react_ui_components.Dialog,
+          {
+            isOpen: true,
+            title: translate("resolution.title", "Decide how to apply the revision"),
+            onRequestClose: onCancel,
+            type: "warn",
+            style: "wide",
+            actions: [
+              /* @__PURE__ */ import_react.default.createElement(import_react_ui_components.Button, { key: "cancel", style: "lighter", hoverStyle: "brand", onClick: onCancel }, translate("resolution.cancel", "Cancel")),
+              /* @__PURE__ */ import_react.default.createElement(
+                import_react_ui_components.Button,
+                {
+                  key: "apply",
+                  style: "success",
+                  hoverStyle: "success",
+                  disabled: !isComplete || isLoading,
+                  onClick: apply
+                },
+                translate("resolution.apply", "Apply revision")
+              )
+            ]
+          },
+          /* @__PURE__ */ import_react.default.createElement("div", { style: { padding: "16px" } }, errors.length > 0 && /* @__PURE__ */ import_react.default.createElement("div", { style: { color: "red", marginBottom: "1rem", whiteSpace: "pre-line" }, role: "alert" }, [translate("resolution.errors", "The revision cannot be applied like this:"), ...errors].join(
+            "\n"
+          )), /* @__PURE__ */ import_react.default.createElement("p", { style: { marginBottom: "1rem" } }, translate(
+            "resolution.description",
+            "Some content changed since the revision in a way that needs a decision."
+          )), rows.map((row) => /* @__PURE__ */ import_react.default.createElement("div", { key: row.identifier, style: { padding: "0.75rem 0", borderTop: "1px solid #3f3f3f" } }, /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("strong", null, row.label), " ", /* @__PURE__ */ import_react.default.createElement("span", { style: { opacity: 0.7 } }, [
+            row.nodeType.label,
+            ...row.dimensions.map(
+              (dimensions) => Object.values(dimensions).map((values) => values[0]).join("/")
+            )
+          ].filter(Boolean).join(" \xB7 "))), row.problems.map((problem) => /* @__PURE__ */ import_react.default.createElement("div", { key: problem.id }, describeProblem(row, problem))), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", gap: "0.5rem", marginTop: "0.5rem" } }, row.choices.map((choice) => /* @__PURE__ */ import_react.default.createElement(
+            import_react_ui_components.Button,
+            {
+              key: choice,
+              size: "small",
+              style: choices[row.identifier] === choice ? "brand" : "lighter",
+              hoverStyle: "brand",
+              onClick: () => setChoices({ ...choices, [row.identifier]: choice })
+            },
+            labelChoice(row, choice)
+          ))))))
+        );
+      };
+      ResolutionDialog_default = ResolutionDialog;
+    }
+  });
+
+  // src/Components/RevisionDetails.tsx
+  var import_react2, import_react_ui_components2, RevisionDetails, RevisionDetails_default;
+  var init_RevisionDetails = __esm({
+    "src/Components/RevisionDetails.tsx"() {
+      import_react2 = __toESM(require_react());
+      import_react_ui_components2 = __toESM(require_react_ui_components());
       init_format();
       RevisionDetails = ({ revision, onUpdate, onClose, translate, isLoading }) => {
-        const [label, setLabel] = (0, import_react.useState)(revision.label || "");
-        return /* @__PURE__ */ import_react.default.createElement("div", null, /* @__PURE__ */ import_react.default.createElement("table", { style: { width: "100%" } }, /* @__PURE__ */ import_react.default.createElement("tbody", null, /* @__PURE__ */ import_react.default.createElement("tr", null, /* @__PURE__ */ import_react.default.createElement("td", { style: { verticalAlign: "top" } }, /* @__PURE__ */ import_react.default.createElement("strong", null, translate("header.revision"))), /* @__PURE__ */ import_react.default.createElement("td", null, formatRevisionDate(revision))), /* @__PURE__ */ import_react.default.createElement("tr", null, /* @__PURE__ */ import_react.default.createElement("td", { style: { verticalAlign: "top" } }, /* @__PURE__ */ import_react.default.createElement("strong", null, translate("header.creator"))), /* @__PURE__ */ import_react.default.createElement("td", null, revision.creator)), revision.isMoved && /* @__PURE__ */ import_react.default.createElement("tr", null, /* @__PURE__ */ import_react.default.createElement("td", { style: { verticalAlign: "top" } }, /* @__PURE__ */ import_react.default.createElement("strong", null, translate("header.moved"))), /* @__PURE__ */ import_react.default.createElement("td", null, translate("revision.isMoved"))), /* @__PURE__ */ import_react.default.createElement("tr", null, /* @__PURE__ */ import_react.default.createElement("td", { style: { verticalAlign: "top" } }, /* @__PURE__ */ import_react.default.createElement("strong", null, translate("header.identifier"))), /* @__PURE__ */ import_react.default.createElement("td", null, revision.identifier)), /* @__PURE__ */ import_react.default.createElement("tr", null, /* @__PURE__ */ import_react.default.createElement("td", { colSpan: 2 }, /* @__PURE__ */ import_react.default.createElement("strong", null, translate("header.label")))), /* @__PURE__ */ import_react.default.createElement("tr", null, /* @__PURE__ */ import_react.default.createElement("td", { colSpan: 2 }, /* @__PURE__ */ import_react.default.createElement(import_react_ui_components.TextInput, { defaultValue: label, onChange: setLabel }))))), /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: "1rem" } }, /* @__PURE__ */ import_react.default.createElement(import_react_ui_components.Button, { style: "warn", onClick: onClose, disabled: isLoading }, translate("action.close")), /* @__PURE__ */ import_react.default.createElement(import_react_ui_components.Button, { style: "success", onClick: () => onUpdate(label), disabled: label == revision.label || isLoading }, translate("action.apply"))));
+        const [label, setLabel] = (0, import_react2.useState)(revision.label || "");
+        return /* @__PURE__ */ import_react2.default.createElement("div", null, /* @__PURE__ */ import_react2.default.createElement("table", { style: { width: "100%" } }, /* @__PURE__ */ import_react2.default.createElement("tbody", null, /* @__PURE__ */ import_react2.default.createElement("tr", null, /* @__PURE__ */ import_react2.default.createElement("td", { style: { verticalAlign: "top" } }, /* @__PURE__ */ import_react2.default.createElement("strong", null, translate("header.revision"))), /* @__PURE__ */ import_react2.default.createElement("td", null, formatRevisionDate(revision))), /* @__PURE__ */ import_react2.default.createElement("tr", null, /* @__PURE__ */ import_react2.default.createElement("td", { style: { verticalAlign: "top" } }, /* @__PURE__ */ import_react2.default.createElement("strong", null, translate("header.creator"))), /* @__PURE__ */ import_react2.default.createElement("td", null, revision.creator)), revision.isMoved && /* @__PURE__ */ import_react2.default.createElement("tr", null, /* @__PURE__ */ import_react2.default.createElement("td", { style: { verticalAlign: "top" } }, /* @__PURE__ */ import_react2.default.createElement("strong", null, translate("header.moved"))), /* @__PURE__ */ import_react2.default.createElement("td", null, translate("revision.isMoved"))), /* @__PURE__ */ import_react2.default.createElement("tr", null, /* @__PURE__ */ import_react2.default.createElement("td", { style: { verticalAlign: "top" } }, /* @__PURE__ */ import_react2.default.createElement("strong", null, translate("header.identifier"))), /* @__PURE__ */ import_react2.default.createElement("td", null, revision.identifier)), /* @__PURE__ */ import_react2.default.createElement("tr", null, /* @__PURE__ */ import_react2.default.createElement("td", { colSpan: 2 }, /* @__PURE__ */ import_react2.default.createElement("strong", null, translate("header.label")))), /* @__PURE__ */ import_react2.default.createElement("tr", null, /* @__PURE__ */ import_react2.default.createElement("td", { colSpan: 2 }, /* @__PURE__ */ import_react2.default.createElement(import_react_ui_components2.TextInput, { defaultValue: label, onChange: setLabel }))))), /* @__PURE__ */ import_react2.default.createElement("div", { style: { marginTop: "1rem" } }, /* @__PURE__ */ import_react2.default.createElement(import_react_ui_components2.Button, { style: "warn", onClick: onClose, disabled: isLoading }, translate("action.close")), /* @__PURE__ */ import_react2.default.createElement(import_react_ui_components2.Button, { style: "success", onClick: () => onUpdate(label), disabled: label == revision.label || isLoading }, translate("action.apply"))));
       };
-      RevisionDetails_default = import_react.default.memo(RevisionDetails);
+      RevisionDetails_default = import_react2.default.memo(RevisionDetails);
     }
   });
 
   // src/Components/Diff/AssetPropertyDiff.tsx
-  var import_react2, AssetPropertyDiff, AssetPropertyDiff_default;
+  var import_react3, AssetPropertyDiff, AssetPropertyDiff_default;
   var init_AssetPropertyDiff = __esm({
     "src/Components/Diff/AssetPropertyDiff.tsx"() {
-      import_react2 = __toESM(require_react());
+      import_react3 = __toESM(require_react());
       AssetPropertyDiff = ({ encodedAssetData }) => {
         let assetData = null;
         if (encodedAssetData) {
@@ -297,17 +426,17 @@
           } catch (e) {
           }
         }
-        return assetData?.src ? /* @__PURE__ */ import_react2.default.createElement("a", { href: assetData.src, target: "_blank", rel: "noreferrer", title: assetData.alt }, assetData.filename) : /* @__PURE__ */ import_react2.default.createElement("p", null, encodedAssetData);
+        return assetData?.src ? /* @__PURE__ */ import_react3.default.createElement("a", { href: assetData.src, target: "_blank", rel: "noreferrer", title: assetData.alt }, assetData.filename) : /* @__PURE__ */ import_react3.default.createElement("p", null, encodedAssetData);
       };
-      AssetPropertyDiff_default = import_react2.default.memo(AssetPropertyDiff);
+      AssetPropertyDiff_default = import_react3.default.memo(AssetPropertyDiff);
     }
   });
 
   // src/Components/Diff/ImagePropertyDiff.tsx
-  var import_react3, ImagePropertyDiff, ImagePropertyDiff_default;
+  var import_react4, ImagePropertyDiff, ImagePropertyDiff_default;
   var init_ImagePropertyDiff = __esm({
     "src/Components/Diff/ImagePropertyDiff.tsx"() {
-      import_react3 = __toESM(require_react());
+      import_react4 = __toESM(require_react());
       ImagePropertyDiff = ({ encodedImageData }) => {
         let imageData = null;
         if (encodedImageData) {
@@ -316,69 +445,69 @@
           } catch (e) {
           }
         }
-        return imageData?.src ? /* @__PURE__ */ import_react3.default.createElement("img", { src: imageData.src, alt: imageData.alt, title: imageData.filename }) : /* @__PURE__ */ import_react3.default.createElement("p", null, encodedImageData);
+        return imageData?.src ? /* @__PURE__ */ import_react4.default.createElement("img", { src: imageData.src, alt: imageData.alt, title: imageData.filename }) : /* @__PURE__ */ import_react4.default.createElement("p", null, encodedImageData);
       };
-      ImagePropertyDiff_default = import_react3.default.memo(ImagePropertyDiff);
+      ImagePropertyDiff_default = import_react4.default.memo(ImagePropertyDiff);
     }
   });
 
   // src/Components/Diff/DateTimePropertyDiff.tsx
-  var import_react4, DateTimePropertyDiff, DateTimePropertyDiff_default;
+  var import_react5, DateTimePropertyDiff, DateTimePropertyDiff_default;
   var init_DateTimePropertyDiff = __esm({
     "src/Components/Diff/DateTimePropertyDiff.tsx"() {
-      import_react4 = __toESM(require_react());
+      import_react5 = __toESM(require_react());
       init_format();
       DateTimePropertyDiff = ({ encodedDateTimeData }) => {
-        return /* @__PURE__ */ import_react4.default.createElement("time", null, encodedDateTimeData ? formatChangeDate(encodedDateTimeData) : "-");
+        return /* @__PURE__ */ import_react5.default.createElement("time", null, encodedDateTimeData ? formatChangeDate(encodedDateTimeData) : "-");
       };
-      DateTimePropertyDiff_default = import_react4.default.memo(DateTimePropertyDiff);
+      DateTimePropertyDiff_default = import_react5.default.memo(DateTimePropertyDiff);
     }
   });
 
   // src/Components/Diff/TextPropertyDiff.tsx
-  var import_react5, TextPropertyDiff, TextPropertyDiff_default;
+  var import_react6, TextPropertyDiff, TextPropertyDiff_default;
   var init_TextPropertyDiff = __esm({
     "src/Components/Diff/TextPropertyDiff.tsx"() {
-      import_react5 = __toESM(require_react());
+      import_react6 = __toESM(require_react());
       TextPropertyDiff = ({ text }) => {
-        return /* @__PURE__ */ import_react5.default.createElement("span", null, text ? text : "-");
+        return /* @__PURE__ */ import_react6.default.createElement("span", null, text ? text : "-");
       };
-      TextPropertyDiff_default = import_react5.default.memo(TextPropertyDiff);
+      TextPropertyDiff_default = import_react6.default.memo(TextPropertyDiff);
     }
   });
 
   // src/Components/Diff/NodePropertyDiff.tsx
-  var import_react6, NodePropertyDiff, NodePropertyDiff_default;
+  var import_react7, NodePropertyDiff, NodePropertyDiff_default;
   var init_NodePropertyDiff = __esm({
     "src/Components/Diff/NodePropertyDiff.tsx"() {
-      import_react6 = __toESM(require_react());
+      import_react7 = __toESM(require_react());
       NodePropertyDiff = ({ value }) => {
-        return /* @__PURE__ */ import_react6.default.createElement("span", null, value);
+        return /* @__PURE__ */ import_react7.default.createElement("span", null, value);
       };
-      NodePropertyDiff_default = import_react6.default.memo(NodePropertyDiff);
+      NodePropertyDiff_default = import_react7.default.memo(NodePropertyDiff);
     }
   });
 
   // src/Components/Diff/FallbackPropertyDiff.tsx
-  var import_react7, FallbackPropertyDiff, FallbackPropertyDiff_default;
+  var import_react8, FallbackPropertyDiff, FallbackPropertyDiff_default;
   var init_FallbackPropertyDiff = __esm({
     "src/Components/Diff/FallbackPropertyDiff.tsx"() {
-      import_react7 = __toESM(require_react());
+      import_react8 = __toESM(require_react());
       FallbackPropertyDiff = ({ value }) => {
-        return /* @__PURE__ */ import_react7.default.createElement("div", { style: { overflow: "auto", maxWidth: "calc(100% - 1rem)" } }, /* @__PURE__ */ import_react7.default.createElement("pre", { style: { display: "table", width: "100%", tableLayout: "fixed" } }, value));
+        return /* @__PURE__ */ import_react8.default.createElement("div", { style: { overflow: "auto", maxWidth: "calc(100% - 1rem)" } }, /* @__PURE__ */ import_react8.default.createElement("pre", { style: { display: "table", width: "100%", tableLayout: "fixed" } }, value));
       };
-      FallbackPropertyDiff_default = import_react7.default.memo(FallbackPropertyDiff);
+      FallbackPropertyDiff_default = import_react8.default.memo(FallbackPropertyDiff);
     }
   });
 
   // src/Components/Diff/VisualDiff.tsx
-  var import_react8, VisualDiff, VisualDiff_default;
+  var import_react9, VisualDiff, VisualDiff_default;
   var init_VisualDiff = __esm({
     "src/Components/Diff/VisualDiff.tsx"() {
-      import_react8 = __toESM(require_react());
+      import_react9 = __toESM(require_react());
       VisualDiff = ({ diff }) => {
-        return Array.isArray(diff) ? /* @__PURE__ */ import_react8.default.createElement(import_react8.default.Fragment, null, diff.map(
-          (blocks) => blocks.map((block, index) => /* @__PURE__ */ import_react8.default.createElement("tr", { key: index }, /* @__PURE__ */ import_react8.default.createElement(
+        return Array.isArray(diff) ? /* @__PURE__ */ import_react9.default.createElement(import_react9.default.Fragment, null, diff.map(
+          (blocks) => blocks.map((block, index) => /* @__PURE__ */ import_react9.default.createElement("tr", { key: index }, /* @__PURE__ */ import_react9.default.createElement(
             "td",
             {
               dangerouslySetInnerHTML: {
@@ -386,7 +515,7 @@
               },
               style: { color: "#ff460d", textAlign: "left" }
             }
-          ), /* @__PURE__ */ import_react8.default.createElement(
+          ), /* @__PURE__ */ import_react9.default.createElement(
             "td",
             {
               dangerouslySetInnerHTML: {
@@ -395,18 +524,18 @@
               style: { color: "#00a338", textAlign: "left" }
             }
           )))
-        )) : /* @__PURE__ */ import_react8.default.createElement("p", null, "Cannot render visual diff");
+        )) : /* @__PURE__ */ import_react9.default.createElement("p", null, "Cannot render visual diff");
       };
-      VisualDiff_default = import_react8.default.memo(VisualDiff);
+      VisualDiff_default = import_react9.default.memo(VisualDiff);
     }
   });
 
   // src/Components/ContentChangeDiff.tsx
-  var import_react9, import_react_ui_components2, ContentChangeDiff, ContentChangeDiff_default;
+  var import_react10, import_react_ui_components3, ContentChangeDiff, ContentChangeDiff_default;
   var init_ContentChangeDiff = __esm({
     "src/Components/ContentChangeDiff.tsx"() {
-      import_react9 = __toESM(require_react());
-      import_react_ui_components2 = __toESM(require_react_ui_components());
+      import_react10 = __toESM(require_react());
+      import_react_ui_components3 = __toESM(require_react_ui_components());
       init_format();
       init_AssetPropertyDiff();
       init_ImagePropertyDiff();
@@ -417,44 +546,44 @@
       init_VisualDiff();
       ContentChangeDiff = ({ nodeChanges, contentDimensions, translate }) => {
         const { node, type, changes = [] } = nodeChanges;
-        const changeColor = (0, import_react9.useMemo)(() => {
+        const changeColor = (0, import_react10.useMemo)(() => {
           return type === "changeNode" ? "#ff8700" : type === "addNode" ? "#00a338" : "#ff460d";
         }, [type]);
-        const dimensionLabel = (0, import_react9.useMemo)(() => {
-          return /* @__PURE__ */ import_react9.default.createElement(import_react9.default.Fragment, null, Object.keys(node.dimensions).map((dimensionName) => {
+        const dimensionLabel = (0, import_react10.useMemo)(() => {
+          return /* @__PURE__ */ import_react10.default.createElement(import_react10.default.Fragment, null, Object.keys(node.dimensions).map((dimensionName) => {
             const contentDimension = contentDimensions[dimensionName];
             if (!contentDimension) {
               return null;
             }
             const presetKey = node.dimensions[dimensionName][0];
-            return presetKey ? /* @__PURE__ */ import_react9.default.createElement("span", { key: dimensionName, title: `${translate(contentDimension.label)}: ${presetKey}` }, contentDimension.icon && /* @__PURE__ */ import_react9.default.createElement(import_react_ui_components2.Icon, { icon: contentDimension.icon, style: { marginRight: "0.5em", color: "#222" } }), translate(contentDimension.presets[presetKey].label)) : null;
+            return presetKey ? /* @__PURE__ */ import_react10.default.createElement("span", { key: dimensionName, title: `${translate(contentDimension.label)}: ${presetKey}` }, contentDimension.icon && /* @__PURE__ */ import_react10.default.createElement(import_react_ui_components3.Icon, { icon: contentDimension.icon, style: { marginRight: "0.5em", color: "#222" } }), translate(contentDimension.presets[presetKey].label)) : null;
           }));
         }, [node.dimensions]);
-        const renderChange = (0, import_react9.useCallback)((text, type2) => {
+        const renderChange = (0, import_react10.useCallback)((text, type2) => {
           switch (type2) {
             case "text":
-              return /* @__PURE__ */ import_react9.default.createElement(TextPropertyDiff_default, { text });
+              return /* @__PURE__ */ import_react10.default.createElement(TextPropertyDiff_default, { text });
             case "image":
-              return /* @__PURE__ */ import_react9.default.createElement(ImagePropertyDiff_default, { encodedImageData: text });
+              return /* @__PURE__ */ import_react10.default.createElement(ImagePropertyDiff_default, { encodedImageData: text });
             case "asset":
-              return /* @__PURE__ */ import_react9.default.createElement(AssetPropertyDiff_default, { encodedAssetData: text });
+              return /* @__PURE__ */ import_react10.default.createElement(AssetPropertyDiff_default, { encodedAssetData: text });
             case "datetime":
-              return /* @__PURE__ */ import_react9.default.createElement(DateTimePropertyDiff_default, { encodedDateTimeData: text });
+              return /* @__PURE__ */ import_react10.default.createElement(DateTimePropertyDiff_default, { encodedDateTimeData: text });
             case "array":
               try {
                 const changes2 = JSON.parse(text);
-                return /* @__PURE__ */ import_react9.default.createElement("ul", null, changes2.map((change, index) => {
-                  return /* @__PURE__ */ import_react9.default.createElement("li", { key: index }, /* @__PURE__ */ import_react9.default.createElement(FallbackPropertyDiff_default, { value: change }));
+                return /* @__PURE__ */ import_react10.default.createElement("ul", null, changes2.map((change, index) => {
+                  return /* @__PURE__ */ import_react10.default.createElement("li", { key: index }, /* @__PURE__ */ import_react10.default.createElement(FallbackPropertyDiff_default, { value: change }));
                 }));
               } catch (e) {
-                return /* @__PURE__ */ import_react9.default.createElement(FallbackPropertyDiff_default, { value: text });
+                return /* @__PURE__ */ import_react10.default.createElement(FallbackPropertyDiff_default, { value: text });
               }
             case "node":
-              return /* @__PURE__ */ import_react9.default.createElement(NodePropertyDiff_default, { value: text });
+              return /* @__PURE__ */ import_react10.default.createElement(NodePropertyDiff_default, { value: text });
           }
-          return /* @__PURE__ */ import_react9.default.createElement(FallbackPropertyDiff_default, { value: text });
+          return /* @__PURE__ */ import_react10.default.createElement(FallbackPropertyDiff_default, { value: text });
         }, []);
-        return /* @__PURE__ */ import_react9.default.createElement(
+        return /* @__PURE__ */ import_react10.default.createElement(
           "div",
           {
             style: {
@@ -465,41 +594,41 @@
               borderLeft: `3px solid ${changeColor}`
             }
           },
-          /* @__PURE__ */ import_react9.default.createElement("div", { style: { display: "flex", justifyContent: "space-between" } }, /* @__PURE__ */ import_react9.default.createElement("span", null, /* @__PURE__ */ import_react9.default.createElement("strong", null, translate("diff." + type)), node.nodeType.icon && /* @__PURE__ */ import_react9.default.createElement(
-            import_react_ui_components2.Icon,
+          /* @__PURE__ */ import_react10.default.createElement("div", { style: { display: "flex", justifyContent: "space-between" } }, /* @__PURE__ */ import_react10.default.createElement("span", null, /* @__PURE__ */ import_react10.default.createElement("strong", null, translate("diff." + type)), node.nodeType.icon && /* @__PURE__ */ import_react10.default.createElement(
+            import_react_ui_components3.Icon,
             {
               icon: node.nodeType.icon,
               title: node.nodeType.label ? translate(node.nodeType.label) : node.nodeType.name,
               style: { margin: "0 0.5em", color: "#222" },
               color: "primaryBlue"
             }
-          ), node.label), /* @__PURE__ */ import_react9.default.createElement("span", null, dimensionLabel, /* @__PURE__ */ import_react9.default.createElement(import_react_ui_components2.Icon, { icon: "clock", style: { margin: "0 0.5em", color: "#222" } }), formatChangeDate(node.lastModificationDateTime))),
+          ), node.label), /* @__PURE__ */ import_react10.default.createElement("span", null, dimensionLabel, /* @__PURE__ */ import_react10.default.createElement(import_react_ui_components3.Icon, { icon: "clock", style: { margin: "0 0.5em", color: "#222" } }), formatChangeDate(node.lastModificationDateTime))),
           Object.keys(changes).map((propertyName) => {
             const change = changes[propertyName];
-            return /* @__PURE__ */ import_react9.default.createElement(
+            return /* @__PURE__ */ import_react10.default.createElement(
               "div",
               {
                 key: propertyName,
                 style: { borderTop: "1px solid #323232", marginTop: "1rem", padding: "1rem" }
               },
-              /* @__PURE__ */ import_react9.default.createElement("div", null, translate("diff.propertyLabel", change.propertyLabel, {
+              /* @__PURE__ */ import_react10.default.createElement("div", null, translate("diff.propertyLabel", change.propertyLabel, {
                 propertyLabel: change.propertyLabel
               })),
-              /* @__PURE__ */ import_react9.default.createElement("table", { style: { width: "100%", borderSpacing: 0 } }, /* @__PURE__ */ import_react9.default.createElement("thead", null, /* @__PURE__ */ import_react9.default.createElement("tr", null, /* @__PURE__ */ import_react9.default.createElement("th", { style: { textAlign: "left", width: "50%" } }, translate("diff.old")), /* @__PURE__ */ import_react9.default.createElement("th", { style: { textAlign: "left", width: "50%" } }, translate("diff.new")))), /* @__PURE__ */ import_react9.default.createElement("tbody", null, Array.isArray(change.diff) && change.diff.length > 0 ? /* @__PURE__ */ import_react9.default.createElement(VisualDiff_default, { diff: change.diff }) : /* @__PURE__ */ import_react9.default.createElement("tr", null, /* @__PURE__ */ import_react9.default.createElement("td", { style: { color: "#ff460d" } }, renderChange(change.original, change.originalType)), /* @__PURE__ */ import_react9.default.createElement("td", { style: { color: "#00a338" } }, renderChange(change.changed, change.changedType)))))
+              /* @__PURE__ */ import_react10.default.createElement("table", { style: { width: "100%", borderSpacing: 0 } }, /* @__PURE__ */ import_react10.default.createElement("thead", null, /* @__PURE__ */ import_react10.default.createElement("tr", null, /* @__PURE__ */ import_react10.default.createElement("th", { style: { textAlign: "left", width: "50%" } }, translate("diff.old")), /* @__PURE__ */ import_react10.default.createElement("th", { style: { textAlign: "left", width: "50%" } }, translate("diff.new")))), /* @__PURE__ */ import_react10.default.createElement("tbody", null, Array.isArray(change.diff) && change.diff.length > 0 ? /* @__PURE__ */ import_react10.default.createElement(VisualDiff_default, { diff: change.diff }) : /* @__PURE__ */ import_react10.default.createElement("tr", null, /* @__PURE__ */ import_react10.default.createElement("td", { style: { color: "#ff460d" } }, renderChange(change.original, change.originalType)), /* @__PURE__ */ import_react10.default.createElement("td", { style: { color: "#00a338" } }, renderChange(change.changed, change.changedType)))))
             );
           })
         );
       };
-      ContentChangeDiff_default = import_react9.default.memo(ContentChangeDiff);
+      ContentChangeDiff_default = import_react10.default.memo(ContentChangeDiff);
     }
   });
 
   // src/Components/ErrorBoundary.tsx
-  var import_react10, ErrorBoundary;
+  var import_react11, ErrorBoundary;
   var init_ErrorBoundary = __esm({
     "src/Components/ErrorBoundary.tsx"() {
-      import_react10 = __toESM(require_react());
-      ErrorBoundary = class extends import_react10.default.Component {
+      import_react11 = __toESM(require_react());
+      ErrorBoundary = class extends import_react11.default.Component {
         constructor(props) {
           super(props);
           this.state = { hasError: false };
@@ -512,7 +641,7 @@
         }
         render() {
           if (this.state.hasError) {
-            return /* @__PURE__ */ import_react10.default.createElement("strong", { style: { color: "red" } }, this.props.text || "Something went wrong.");
+            return /* @__PURE__ */ import_react11.default.createElement("strong", { style: { color: "red" } }, this.props.text || "Something went wrong.");
           }
           return this.props.children;
         }
@@ -521,11 +650,11 @@
   });
 
   // src/Components/RevisionDiff.tsx
-  var import_react11, import_react_ui_components3, RevisionDiff, RevisionDiff_default;
+  var import_react12, import_react_ui_components4, RevisionDiff, RevisionDiff_default;
   var init_RevisionDiff = __esm({
     "src/Components/RevisionDiff.tsx"() {
-      import_react11 = __toESM(require_react());
-      import_react_ui_components3 = __toESM(require_react_ui_components());
+      import_react12 = __toESM(require_react());
+      import_react_ui_components4 = __toESM(require_react_ui_components());
       init_fetch();
       init_ContentChangeDiff();
       init_ErrorBoundary();
@@ -538,16 +667,16 @@
         onClose,
         contentDimensions
       }) => {
-        const [isLoading, setIsLoading] = (0, import_react11.useState)(true);
-        const [changes, setChanges] = (0, import_react11.useState)({});
-        const [message, setMessage] = (0, import_react11.useState)("");
-        const version = (0, import_react11.useMemo)(
+        const [isLoading, setIsLoading] = (0, import_react12.useState)(true);
+        const [changes, setChanges] = (0, import_react12.useState)({});
+        const [message, setMessage] = (0, import_react12.useState)("");
+        const version = (0, import_react12.useMemo)(
           () => revision ? formatRevisionLabel(revision, translate) || translate("revision.label", `By ${revision.creator}`, {
             creator: revision.creator
           }) : "",
           [revision]
         );
-        const fetchChanges = (0, import_react11.useCallback)(() => {
+        const fetchChanges = (0, import_react12.useCallback)(() => {
           setIsLoading(true);
           fetchFromBackend(
             { action: "getDiff", params: { node: documentNode, revision } },
@@ -557,10 +686,10 @@
             console.error(error.message);
           });
         }, [revision]);
-        (0, import_react11.useEffect)(() => {
+        (0, import_react12.useEffect)(() => {
           fetchChanges();
         }, [revision]);
-        return /* @__PURE__ */ import_react11.default.createElement(
+        return /* @__PURE__ */ import_react12.default.createElement(
           "div",
           {
             style: {
@@ -572,18 +701,18 @@
               inset: "0"
             }
           },
-          /* @__PURE__ */ import_react11.default.createElement("h1", { style: { marginBottom: "2rem", fontSize: "1.5em", lineHeight: 1.3 } }, translate("diff.header", "The revision contains the following changes", {
+          /* @__PURE__ */ import_react12.default.createElement("h1", { style: { marginBottom: "2rem", fontSize: "1.5em", lineHeight: 1.3 } }, translate("diff.header", "The revision contains the following changes", {
             version,
             date: formatRevisionDate(revision)
           })),
-          revision.isMoved && /* @__PURE__ */ import_react11.default.createElement("div", { style: { marginBottom: "2rem", fontWeight: "bold" } }, /* @__PURE__ */ import_react11.default.createElement(import_react_ui_components3.Icon, { icon: "exclamation-triangle", style: { marginRight: "0.5rem", color: "#ff8700" } }), translate("diff.moved", "The document was moved to another location.")),
-          /* @__PURE__ */ import_react11.default.createElement("div", { style: { overflow: "auto" } }, isLoading ? /* @__PURE__ */ import_react11.default.createElement("div", null, /* @__PURE__ */ import_react11.default.createElement(import_react_ui_components3.Icon, { icon: "spinner", spin: true, color: "primaryBlue" }), " Loading \u2026") : changes && Object.keys(changes).length > 0 ? Object.keys(changes).map(
-            (nodeIdentifier) => Object.keys(changes[nodeIdentifier]).map((dimensionHash) => /* @__PURE__ */ import_react11.default.createElement("div", { key: nodeIdentifier, style: { marginBottom: "1rem" } }, /* @__PURE__ */ import_react11.default.createElement(
+          revision.isMoved && /* @__PURE__ */ import_react12.default.createElement("div", { style: { marginBottom: "2rem", fontWeight: "bold" } }, /* @__PURE__ */ import_react12.default.createElement(import_react_ui_components4.Icon, { icon: "exclamation-triangle", style: { marginRight: "0.5rem", color: "#ff8700" } }), translate("diff.moved", "The document was moved to another location.")),
+          /* @__PURE__ */ import_react12.default.createElement("div", { style: { overflow: "auto" } }, isLoading ? /* @__PURE__ */ import_react12.default.createElement("div", null, /* @__PURE__ */ import_react12.default.createElement(import_react_ui_components4.Icon, { icon: "spinner", spin: true, color: "primaryBlue" }), " Loading \u2026") : changes && Object.keys(changes).length > 0 ? Object.keys(changes).map(
+            (nodeIdentifier) => Object.keys(changes[nodeIdentifier]).map((dimensionHash) => /* @__PURE__ */ import_react12.default.createElement("div", { key: nodeIdentifier, style: { marginBottom: "1rem" } }, /* @__PURE__ */ import_react12.default.createElement(
               ErrorBoundary,
               {
                 text: `Diff for node ${changes[nodeIdentifier][dimensionHash].node?.label || nodeIdentifier} could not be rendered. Please check the logs.`
               },
-              /* @__PURE__ */ import_react11.default.createElement(
+              /* @__PURE__ */ import_react12.default.createElement(
                 ContentChangeDiff_default,
                 {
                   nodeChanges: changes[nodeIdentifier][dimensionHash],
@@ -592,30 +721,30 @@
                 }
               )
             )))
-          ) : /* @__PURE__ */ import_react11.default.createElement("p", null, message ? message : translate("diff.empty", "No changes have been found"))),
-          /* @__PURE__ */ import_react11.default.createElement("div", { style: { marginTop: "2rem", display: "flex", justifyContent: "space-between" } }, /* @__PURE__ */ import_react11.default.createElement(import_react_ui_components3.Button, { style: "warn", onClick: onClose }, translate("action.close")), /* @__PURE__ */ import_react11.default.createElement(
-            import_react_ui_components3.Button,
+          ) : /* @__PURE__ */ import_react12.default.createElement("p", null, message ? message : translate("diff.empty", "No changes have been found"))),
+          /* @__PURE__ */ import_react12.default.createElement("div", { style: { marginTop: "2rem", display: "flex", justifyContent: "space-between" } }, /* @__PURE__ */ import_react12.default.createElement(import_react_ui_components4.Button, { style: "warn", onClick: onClose }, translate("action.close")), /* @__PURE__ */ import_react12.default.createElement(
+            import_react_ui_components4.Button,
             {
               style: "success",
               onClick: () => applyRevision(revision),
               disabled: isLoading || Object.keys(changes).length === 0
             },
-            /* @__PURE__ */ import_react11.default.createElement(import_react_ui_components3.Icon, { icon: "check" }),
+            /* @__PURE__ */ import_react12.default.createElement(import_react_ui_components4.Icon, { icon: "check" }),
             " ",
             translate("action.apply")
           ))
         );
       };
-      RevisionDiff_default = import_react11.default.memo(RevisionDiff);
+      RevisionDiff_default = import_react12.default.memo(RevisionDiff);
     }
   });
 
   // src/Components/RevisionListItem.tsx
-  var import_react12, import_react_ui_components4, RevisionListItem, RevisionListItem_default;
+  var import_react13, import_react_ui_components5, RevisionListItem, RevisionListItem_default;
   var init_RevisionListItem = __esm({
     "src/Components/RevisionListItem.tsx"() {
-      import_react12 = __toESM(require_react());
-      import_react_ui_components4 = __toESM(require_react_ui_components());
+      import_react13 = __toESM(require_react());
+      import_react_ui_components5 = __toESM(require_react_ui_components());
       init_format();
       RevisionListItem = ({
         revision,
@@ -626,7 +755,7 @@
         showDeleteButton,
         allowApply
       }) => {
-        return /* @__PURE__ */ import_react12.default.createElement("tr", { key: revision.creationDateTime }, /* @__PURE__ */ import_react12.default.createElement(
+        return /* @__PURE__ */ import_react13.default.createElement("tr", { key: revision.creationDateTime }, /* @__PURE__ */ import_react13.default.createElement(
           "td",
           {
             title: translate("tooltip.revisionLabel", "Created on {revisionDate} by {creator}", {
@@ -634,12 +763,12 @@
               creator: revision.creator
             })
           },
-          /* @__PURE__ */ import_react12.default.createElement("div", null, formatRevisionLabel(revision, translate) || translate("revision.label", "By {creator}", {
+          /* @__PURE__ */ import_react13.default.createElement("div", null, formatRevisionLabel(revision, translate) || translate("revision.label", "By {creator}", {
             creator: revision.creator
           })),
-          /* @__PURE__ */ import_react12.default.createElement("time", { style: { opacity: 0.5 } }, formatRevisionDate(revision))
-        ), /* @__PURE__ */ import_react12.default.createElement("td", { style: { textAlign: "center", verticalAlign: "middle" } }, /* @__PURE__ */ import_react12.default.createElement(
-          import_react_ui_components4.IconButton,
+          /* @__PURE__ */ import_react13.default.createElement("time", { style: { opacity: 0.5 } }, formatRevisionDate(revision))
+        ), /* @__PURE__ */ import_react13.default.createElement("td", { style: { textAlign: "center", verticalAlign: "middle" } }, /* @__PURE__ */ import_react13.default.createElement(
+          import_react_ui_components5.IconButton,
           {
             onClick: () => showRevision(revision),
             icon: "trash-restore",
@@ -652,8 +781,8 @@
               creator: revision.creator
             }) : translate("action.apply.disabled.title", "This revision cannot be applied")
           }
-        ), /* @__PURE__ */ import_react12.default.createElement(
-          import_react_ui_components4.IconButton,
+        ), /* @__PURE__ */ import_react13.default.createElement(
+          import_react_ui_components5.IconButton,
           {
             onClick: () => setSelectedRevision(revision),
             icon: "comment",
@@ -665,8 +794,8 @@
               creator: revision.creator
             })
           }
-        ), showDeleteButton && /* @__PURE__ */ import_react12.default.createElement(
-          import_react_ui_components4.IconButton,
+        ), showDeleteButton && /* @__PURE__ */ import_react13.default.createElement(
+          import_react_ui_components5.IconButton,
           {
             onClick: () => deleteRevision(revision),
             icon: "times-circle",
@@ -680,18 +809,19 @@
           }
         )));
       };
-      RevisionListItem_default = import_react12.default.memo(RevisionListItem);
+      RevisionListItem_default = import_react13.default.memo(RevisionListItem);
     }
   });
 
   // src/Components/RevisionList.tsx
-  var import_react13, import_react_ui_components5, RevisionList, RevisionList_default;
+  var import_react14, import_react_ui_components6, RevisionList, RevisionList_default;
   var init_RevisionList = __esm({
     "src/Components/RevisionList.tsx"() {
-      import_react13 = __toESM(require_react());
-      import_react_ui_components5 = __toESM(require_react_ui_components());
+      import_react14 = __toESM(require_react());
+      import_react_ui_components6 = __toESM(require_react_ui_components());
       init_fetch();
       init_format();
+      init_ResolutionDialog();
       init_RevisionDetails();
       init_RevisionDiff();
       init_RevisionListItem();
@@ -704,42 +834,33 @@
         renderSecondaryInspector,
         contentDimensions
       }) => {
-        const [revisions, setRevisions] = (0, import_react13.useState)([]);
-        const [message, setMessage] = (0, import_react13.useState)("");
-        const [selectedRevision, setSelectedRevision] = (0, import_react13.useState)(null);
-        const [isLoading, setIsLoading] = (0, import_react13.useState)(true);
-        const translate = (0, import_react13.useCallback)(
+        const [revisions, setRevisions] = (0, import_react14.useState)([]);
+        const [message, setMessage] = (0, import_react14.useState)("");
+        const [selectedRevision, setSelectedRevision] = (0, import_react14.useState)(null);
+        const [isLoading, setIsLoading] = (0, import_react14.useState)(true);
+        const [resolutionRequest, setResolutionRequest] = (0, import_react14.useState)(null);
+        const translate = (0, import_react14.useCallback)(
           (id, fallback = "", params = [], packageKey = "NEOSidekick.Revisions", sourceName = "Main") => {
             return i18nRegistry.translate(id, fallback, params, packageKey, sourceName);
           },
           []
         );
-        const fetchRevisions = (0, import_react13.useCallback)(() => {
+        const fetchRevisions = (0, import_react14.useCallback)(() => {
           setIsLoading(true);
           fetchFromBackend({ action: "get", params: { node: documentNode } }, setIsLoading).then(({ revisions: revisions2 }) => setRevisions(revisions2)).catch((error) => {
             setMessage(translate("error.failedFetchingRevisions"));
             console.error(error.message);
           });
         }, [documentNode]);
-        const resolveConflicts = (0, import_react13.useCallback)((revision, conflicts) => {
-          if (confirm(
-            translate(
-              "error.verifyResolveConflicts",
-              "Some conflicts were detected. Do you still want to apply the revision?{conflicts}",
-              { conflicts: "\n\n" + conflicts.join("\n\n") }
-            )
-          )) {
-            applyRevision(revision, true);
-          }
-        }, []);
-        const applyRevision = (0, import_react13.useCallback)((revision, force = false) => {
+        const applyRevision = (0, import_react14.useCallback)((revision, resolutions = {}) => {
           fetchFromBackend(
             {
               action: "apply",
-              params: { node: documentNode, revision, force }
+              params: { node: documentNode, revision, resolutions }
             },
             setIsLoading
           ).then(() => {
+            setResolutionRequest(null);
             addFlashMessage(
               translate("success.revisionApplied"),
               translate("success.revisionApplied.message", 'Revision "{label}" by "{creator}" applied.', {
@@ -751,19 +872,28 @@
             reloadDocument();
             setMessage("");
           }).catch((error) => {
-            const { status, conflicts } = error;
-            if (status === 409) {
-              resolveConflicts(revision, conflicts);
-            } else if (status === 403 || status === 422) {
+            const { status, rows = [], errors = [] } = error;
+            if (status === 422 && rows.length > 0) {
+              setResolutionRequest((request) => ({
+                revision,
+                rows,
+                errors,
+                resolutions,
+                round: request ? request.round + 1 : 0
+              }));
+              return;
+            }
+            setResolutionRequest(null);
+            if (status === 403 || status === 422) {
               const reason = status === 403 ? translate("error.revisionApplyDenied", "Not allowed to apply the revision") : translate("error.revisionNotApplicable", "Revision cannot be applied");
-              setMessage([reason, ...conflicts].join("\n"));
+              setMessage([reason, ...errors].join("\n"));
             } else {
               setMessage(translate("error.failedApplyingRevision"));
               console.error(error);
             }
           });
         }, []);
-        const deleteRevision = (0, import_react13.useCallback)((revision) => {
+        const deleteRevision = (0, import_react14.useCallback)((revision) => {
           if (confirm(
             translate(
               "confirm.deleteRevision",
@@ -791,7 +921,7 @@
             });
           }
         }, []);
-        const updateSelectedRevision = (0, import_react13.useCallback)(
+        const updateSelectedRevision = (0, import_react14.useCallback)(
           (label) => {
             fetchFromBackend({ action: "setlabel", params: { revision: selectedRevision, label } }, setIsLoading).then(() => {
               addFlashMessage(
@@ -811,11 +941,11 @@
           },
           [selectedRevision]
         );
-        const showRevision = (0, import_react13.useCallback)((revision) => {
+        const showRevision = (0, import_react14.useCallback)((revision) => {
           if (!revision) {
             renderSecondaryInspector(null, null);
           } else {
-            renderSecondaryInspector("REVISIONS_COMPARE", () => /* @__PURE__ */ import_react13.default.createElement(
+            renderSecondaryInspector("REVISIONS_COMPARE", () => /* @__PURE__ */ import_react14.default.createElement(
               RevisionDiff_default,
               {
                 documentNode,
@@ -828,8 +958,20 @@
             ));
           }
         }, []);
-        (0, import_react13.useEffect)(fetchRevisions, [documentNode]);
-        return /* @__PURE__ */ import_react13.default.createElement("div", null, message && /* @__PURE__ */ import_react13.default.createElement("div", { style: { color: "red", margin: "1rem 0", whiteSpace: "pre-line" }, role: "alert" }, message), isLoading && /* @__PURE__ */ import_react13.default.createElement("div", null, /* @__PURE__ */ import_react13.default.createElement(import_react_ui_components5.Icon, { icon: "spinner", spin: true, color: "primaryBlue" }), " Loading \u2026"), selectedRevision ? /* @__PURE__ */ import_react13.default.createElement(
+        (0, import_react14.useEffect)(fetchRevisions, [documentNode]);
+        return /* @__PURE__ */ import_react14.default.createElement("div", null, resolutionRequest && /* @__PURE__ */ import_react14.default.createElement(
+          ResolutionDialog_default,
+          {
+            key: resolutionRequest.round,
+            rows: resolutionRequest.rows,
+            errors: resolutionRequest.errors,
+            previousResolutions: resolutionRequest.resolutions,
+            isLoading,
+            translate,
+            onApply: (resolutions) => applyRevision(resolutionRequest.revision, resolutions),
+            onCancel: () => setResolutionRequest(null)
+          }
+        ), message && /* @__PURE__ */ import_react14.default.createElement("div", { style: { color: "red", margin: "1rem 0", whiteSpace: "pre-line" }, role: "alert" }, message), isLoading && /* @__PURE__ */ import_react14.default.createElement("div", null, /* @__PURE__ */ import_react14.default.createElement(import_react_ui_components6.Icon, { icon: "spinner", spin: true, color: "primaryBlue" }), " Loading \u2026"), selectedRevision ? /* @__PURE__ */ import_react14.default.createElement(
           RevisionDetails_default,
           {
             revision: selectedRevision,
@@ -838,7 +980,7 @@
             translate,
             isLoading
           }
-        ) : revisions.length ? /* @__PURE__ */ import_react13.default.createElement("table", { style: { width: "100%", maxWidth: "100%" } }, /* @__PURE__ */ import_react13.default.createElement("thead", null, /* @__PURE__ */ import_react13.default.createElement("tr", null, /* @__PURE__ */ import_react13.default.createElement("th", { style: { textAlign: "left" } }, translate("header.label")), /* @__PURE__ */ import_react13.default.createElement("th", { style: { width: "100px" } }, translate("header.actions")))), /* @__PURE__ */ import_react13.default.createElement("tbody", null, revisions.map((revision, index) => /* @__PURE__ */ import_react13.default.createElement(import_react13.default.Fragment, { key: index }, /* @__PURE__ */ import_react13.default.createElement(
+        ) : revisions.length ? /* @__PURE__ */ import_react14.default.createElement("table", { style: { width: "100%", maxWidth: "100%" } }, /* @__PURE__ */ import_react14.default.createElement("thead", null, /* @__PURE__ */ import_react14.default.createElement("tr", null, /* @__PURE__ */ import_react14.default.createElement("th", { style: { textAlign: "left" } }, translate("header.label")), /* @__PURE__ */ import_react14.default.createElement("th", { style: { width: "100px" } }, translate("header.actions")))), /* @__PURE__ */ import_react14.default.createElement("tbody", null, revisions.map((revision, index) => /* @__PURE__ */ import_react14.default.createElement(import_react14.default.Fragment, { key: index }, /* @__PURE__ */ import_react14.default.createElement(
           RevisionListItem_default,
           {
             allowApply: index > 0 && !revision.isEmpty,
@@ -849,24 +991,24 @@
             setSelectedRevision,
             showRevision
           }
-        ), index < revisions.length - 1 && /* @__PURE__ */ import_react13.default.createElement("tr", null, /* @__PURE__ */ import_react13.default.createElement("td", { colSpan: 2, style: { borderBottom: "1px solid #3f3f3f" } })))))) : !isLoading ? /* @__PURE__ */ import_react13.default.createElement("em", null, translate("list.noRevisionsFound")) : "");
+        ), index < revisions.length - 1 && /* @__PURE__ */ import_react14.default.createElement("tr", null, /* @__PURE__ */ import_react14.default.createElement("td", { colSpan: 2, style: { borderBottom: "1px solid #3f3f3f" } })))))) : !isLoading ? /* @__PURE__ */ import_react14.default.createElement("em", null, translate("list.noRevisionsFound")) : "");
       };
-      RevisionList_default = import_react13.default.memo(RevisionList);
+      RevisionList_default = import_react14.default.memo(RevisionList);
     }
   });
 
   // src/RevisionsView.tsx
-  var import_react14, import_prop_types, import_react_redux, import_plow_js, import_neos_ui_redux_store, import_neos_ui_decorators, RevisionsView;
+  var import_react15, import_prop_types, import_react_redux, import_plow_js, import_neos_ui_redux_store, import_neos_ui_decorators, RevisionsView;
   var init_RevisionsView = __esm({
     "src/RevisionsView.tsx"() {
-      import_react14 = __toESM(require_react());
+      import_react15 = __toESM(require_react());
       import_prop_types = __toESM(require_prop_types());
       import_react_redux = __toESM(require_react_redux());
       import_plow_js = __toESM(require_plow_js());
       import_neos_ui_redux_store = __toESM(require_neos_ui_redux_store());
       import_neos_ui_decorators = __toESM(require_neos_ui_decorators());
       init_RevisionList();
-      RevisionsView = class extends import_react14.PureComponent {
+      RevisionsView = class extends import_react15.PureComponent {
         constructor(props) {
           super(props);
         }
@@ -880,7 +1022,7 @@
             renderSecondaryInspector,
             contentDimensions
           } = this.props;
-          return /* @__PURE__ */ import_react14.default.createElement(
+          return /* @__PURE__ */ import_react15.default.createElement(
             RevisionList_default,
             {
               documentNode,

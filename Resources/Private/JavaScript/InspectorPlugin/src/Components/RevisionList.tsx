@@ -6,9 +6,19 @@ import Revision from '../Interfaces/Revision';
 import fetchFromBackend from '../Api/fetch';
 import { formatRevisionDate, formatRevisionLabel } from '../Helpers/format';
 import I18nRegistry from '../Interfaces/I18nRegistry';
+import { ResolutionRow, Resolutions } from '../Interfaces/Resolution';
+import ResolutionDialog from './ResolutionDialog';
 import RevisionDetails from './RevisionDetails';
 import RevisionDiff from './RevisionDiff';
 import RevisionListItem from './RevisionListItem';
+
+type ResolutionRequest = {
+    revision: Revision;
+    rows: ResolutionRow[];
+    errors: string[];
+    resolutions: Resolutions;
+    round: number;
+};
 
 interface Props {
     documentNode: Node;
@@ -36,6 +46,7 @@ const RevisionList: React.FC<Props> = ({
     const [message, setMessage] = useState('');
     const [selectedRevision, setSelectedRevision] = useState<Revision>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [resolutionRequest, setResolutionRequest] = useState<ResolutionRequest>(null);
 
     const translate = useCallback(
         (
@@ -60,29 +71,16 @@ const RevisionList: React.FC<Props> = ({
             });
     }, [documentNode]);
 
-    const resolveConflicts = useCallback((revision: Revision, conflicts: string[]) => {
-        if (
-            confirm(
-                translate(
-                    'error.verifyResolveConflicts',
-                    'Some conflicts were detected. Do you still want to apply the revision?{conflicts}',
-                    { conflicts: '\n\n' + conflicts.join('\n\n') }
-                )
-            )
-        ) {
-            applyRevision(revision, true);
-        }
-    }, []);
-
-    const applyRevision = useCallback((revision: Revision, force = false) => {
+    const applyRevision = useCallback((revision: Revision, resolutions: Resolutions = {}) => {
         fetchFromBackend(
             {
                 action: 'apply',
-                params: { node: documentNode, revision, force },
+                params: { node: documentNode, revision, resolutions },
             },
             setIsLoading
         )
             .then(() => {
+                setResolutionRequest(null);
                 addFlashMessage(
                     translate('success.revisionApplied'),
                     translate('success.revisionApplied.message', 'Revision "{label}" by "{creator}" applied.', {
@@ -95,15 +93,25 @@ const RevisionList: React.FC<Props> = ({
                 setMessage('');
             })
             .catch((error) => {
-                const { status, conflicts } = error;
-                if (status === 409) {
-                    resolveConflicts(revision, conflicts);
-                } else if (status === 403 || status === 422) {
+                const { status, rows = [], errors = [] } = error;
+                // Every answer lists all rows that still matter, so the dialog shows the latest one
+                if (status === 422 && rows.length > 0) {
+                    setResolutionRequest((request) => ({
+                        revision,
+                        rows,
+                        errors,
+                        resolutions,
+                        round: request ? request.round + 1 : 0,
+                    }));
+                    return;
+                }
+                setResolutionRequest(null);
+                if (status === 403 || status === 422) {
                     const reason =
                         status === 403
                             ? translate('error.revisionApplyDenied', 'Not allowed to apply the revision')
                             : translate('error.revisionNotApplicable', 'Revision cannot be applied');
-                    setMessage([reason, ...conflicts].join('\n'));
+                    setMessage([reason, ...errors].join('\n'));
                 } else {
                     setMessage(translate('error.failedApplyingRevision'));
                     console.error(error);
@@ -190,6 +198,18 @@ const RevisionList: React.FC<Props> = ({
 
     return (
         <div>
+            {resolutionRequest && (
+                <ResolutionDialog
+                    key={resolutionRequest.round}
+                    rows={resolutionRequest.rows}
+                    errors={resolutionRequest.errors}
+                    previousResolutions={resolutionRequest.resolutions}
+                    isLoading={isLoading}
+                    translate={translate}
+                    onApply={(resolutions) => applyRevision(resolutionRequest.revision, resolutions)}
+                    onCancel={() => setResolutionRequest(null)}
+                />
+            )}
             {message && (
                 <div style={{ color: 'red', margin: '1rem 0', whiteSpace: 'pre-line' }} role="alert">
                     {message}

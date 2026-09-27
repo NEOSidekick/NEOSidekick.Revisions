@@ -13,7 +13,7 @@ type RevisionDiffProps = {
     revision: Revision;
     translate: (id: string, fallback?: string, params?: Record<string, unknown> | string[]) => string;
     onClose: () => void;
-    applyRevision: (revision: Revision, force?: boolean) => void;
+    applyRevision: (revision: Revision) => void;
     contentDimensions: ContentDimensions;
 };
 
