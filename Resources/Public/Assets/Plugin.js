@@ -247,6 +247,14 @@
   function formatRevisionDate(revision) {
     return formatChangeDate(revision.creationDateTime);
   }
+  function formatRevisionLabel(revision, translate) {
+    if (revision.label || !revision.appliedRevision) {
+      return revision.label;
+    }
+    return translate("action.apply.newRevisionLabel", "Applied revision {revision}", {
+      revision: revision.appliedRevision.label || formatChangeDate(revision.appliedRevision.creationDateTime)
+    });
+  }
   function formatChangeDate(datetime) {
     return new Date(datetime).toLocaleString(void 0, {
       year: "2-digit",
@@ -534,7 +542,7 @@
         const [changes, setChanges] = (0, import_react11.useState)({});
         const [message, setMessage] = (0, import_react11.useState)("");
         const version = (0, import_react11.useMemo)(
-          () => revision ? revision.label || translate("revision.label", `By ${revision.creator}`, {
+          () => revision ? formatRevisionLabel(revision, translate) || translate("revision.label", `By ${revision.creator}`, {
             creator: revision.creator
           }) : "",
           [revision]
@@ -607,7 +615,7 @@
               creator: revision.creator
             })
           },
-          /* @__PURE__ */ import_react12.default.createElement("div", null, revision.label || translate("revision.label", "By {creator}", {
+          /* @__PURE__ */ import_react12.default.createElement("div", null, formatRevisionLabel(revision, translate) || translate("revision.label", "By {creator}", {
             creator: revision.creator
           })),
           /* @__PURE__ */ import_react12.default.createElement("time", { style: { opacity: 0.5 } }, formatRevisionDate(revision))
@@ -716,7 +724,7 @@
             addFlashMessage(
               translate("success.revisionApplied"),
               translate("success.revisionApplied.message", 'Revision "{label}" by "{creator}" applied.', {
-                label: revision.label || formatRevisionDate(revision),
+                label: formatRevisionLabel(revision, translate) || formatRevisionDate(revision),
                 creator: revision.creator
               }),
               "success"
@@ -751,7 +759,7 @@
               addFlashMessage(
                 translate("success.revisionDeleted"),
                 translate("success.revisionDeleted.message", 'Revision "{label}" by "{creator} deleted.', {
-                  label: revision.label || formatRevisionDate(revision),
+                  label: formatRevisionLabel(revision, translate) || formatRevisionDate(revision),
                   creator: revision.creator
                 }),
                 "success"
@@ -770,7 +778,7 @@
               addFlashMessage(
                 translate("success.revisionUpdated"),
                 translate("success.revisionUpdated.message", 'Revision {label} by "{creator}" updated.', {
-                  label: selectedRevision.label || formatRevisionDate(selectedRevision),
+                  label: formatRevisionLabel(selectedRevision, translate) || formatRevisionDate(selectedRevision),
                   creator: selectedRevision.creator
                 }),
                 "success"

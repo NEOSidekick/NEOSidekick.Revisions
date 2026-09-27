@@ -1,7 +1,7 @@
 import React from 'react';
 import { IconButton } from '@neos-project/react-ui-components';
 
-import { formatRevisionDate } from '../Helpers/format';
+import { formatRevisionDate, formatRevisionLabel } from '../Helpers/format';
 import Revision from '../Interfaces/Revision';
 
 type RevisionListItemProps = {
@@ -32,7 +32,7 @@ const RevisionListItem: React.FC<RevisionListItemProps> = ({
                 })}
             >
                 <div>
-                    {revision.label ||
+                    {formatRevisionLabel(revision, translate) ||
                         translate('revision.label', 'By {creator}', {
                             creator: revision.creator,
                         })}

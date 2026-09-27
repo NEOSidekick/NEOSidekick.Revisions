@@ -4,7 +4,7 @@ import { Icon } from '@neos-project/react-ui-components';
 import Node from '../Interfaces/Node';
 import Revision from '../Interfaces/Revision';
 import fetchFromBackend from '../Api/fetch';
-import { formatRevisionDate } from '../Helpers/format';
+import { formatRevisionDate, formatRevisionLabel } from '../Helpers/format';
 import I18nRegistry from '../Interfaces/I18nRegistry';
 import RevisionDetails from './RevisionDetails';
 import RevisionDiff from './RevisionDiff';
@@ -86,7 +86,7 @@ const RevisionList: React.FC<Props> = ({
                 addFlashMessage(
                     translate('success.revisionApplied'),
                     translate('success.revisionApplied.message', 'Revision "{label}" by "{creator}" applied.', {
-                        label: revision.label || formatRevisionDate(revision),
+                        label: formatRevisionLabel(revision, translate) || formatRevisionDate(revision),
                         creator: revision.creator,
                     }),
                     'success'
@@ -129,7 +129,7 @@ const RevisionList: React.FC<Props> = ({
                     addFlashMessage(
                         translate('success.revisionDeleted'),
                         translate('success.revisionDeleted.message', 'Revision "{label}" by "{creator} deleted.', {
-                            label: revision.label || formatRevisionDate(revision),
+                            label: formatRevisionLabel(revision, translate) || formatRevisionDate(revision),
                             creator: revision.creator,
                         }),
                         'success'
@@ -151,7 +151,7 @@ const RevisionList: React.FC<Props> = ({
                     addFlashMessage(
                         translate('success.revisionUpdated'),
                         translate('success.revisionUpdated.message', 'Revision {label} by "{creator}" updated.', {
-                            label: selectedRevision.label || formatRevisionDate(selectedRevision),
+                            label: formatRevisionLabel(selectedRevision, translate) || formatRevisionDate(selectedRevision),
                             creator: selectedRevision.creator,
                         }),
                         'success'

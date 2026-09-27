@@ -26,9 +26,6 @@ use NEOSidekick\Revisions\Domain\Repository\RevisionRepository;
 use NEOSidekick\Revisions\Exception\RevisionApplyDeniedException;
 use NEOSidekick\Revisions\Exception\RevisionNotApplicableException;
 use Neos\Flow\I18n\EelHelper\TranslationHelper;
-use Neos\Flow\I18n\Formatter\DatetimeFormatter;
-use Neos\Flow\I18n\Service as I18nService;
-use Neos\Flow\I18n\Translator;
 use Neos\Flow\Persistence\Exception\IllegalObjectTypeException;
 use Neos\Flow\Persistence\PersistenceManagerInterface;
 use Neos\Flow\ResourceManagement\ResourceManager;
@@ -89,11 +86,11 @@ class RevisionService
     protected static $movedNodes = [];
 
     /**
-     * Labels for the revisions created when an applied revision is published, by document node identifier
+     * Applied revisions that the revisions created on shutdown refer to, by document node identifier
      *
-     * @var array<string, string>
+     * @var array<string, Revision>
      */
-    protected static $revisionLabels = [];
+    protected static $appliedRevisions = [];
 
     /**
      * @Flow\Inject
@@ -144,24 +141,6 @@ class RevisionService
     protected $nodeService;
 
     /**
-     * @Flow\Inject
-     * @var Translator
-     */
-    protected $translator;
-
-    /**
-     * @Flow\Inject
-     * @var DatetimeFormatter
-     */
-    protected $datetimeFormatter;
-
-    /**
-     * @Flow\Inject
-     * @var I18nService
-     */
-    protected $localizationService;
-
-    /**
      * @var TranslationHelper
      */
     protected $translationHelper;
@@ -205,7 +184,7 @@ class RevisionService
         $this->revisionRepository->update($revision);
     }
 
-    protected function createRevisionInternal(NodeInterface $node, string $label = null): ?Revision
+    protected function createRevisionInternal(NodeInterface $node, string $label = null, Revision $appliedRevision = null): ?Revision
     {
         $xmlWriter = $this->nodeExportService->export($node->getPath());
         $content = $xmlWriter->flush();
@@ -220,6 +199,9 @@ class RevisionService
             $enableCompression,
             array_key_exists($node->getIdentifier(), self::$movedNodes)
         );
+        if ($appliedRevision !== null) {
+            $revision->setAppliedRevision($appliedRevision);
+        }
 
         try {
             $this->revisionRepository->add($revision);
@@ -315,19 +297,8 @@ class RevisionService
         // The revision of the restored state is created on shutdown like for any publish. The document registered
         // while publishing belongs to the removed temporary workspace, so the live one replaces it.
         if ($this->settings['revisions']['createRevisionAfterApply']) {
-            $useLocale = $this->localizationService->getConfiguration()->getCurrentLocale();
-            $revisionDate = $this->datetimeFormatter->formatDateTimeWithCustomPattern($revision->getCreationDateTime(), 'dd.MM.yyyy, HH:mm', $useLocale);
-
             self::$nodesForRevisions[$node->getIdentifier()] = $node;
-            self::$revisionLabels[$node->getIdentifier()] = $this->translator->translateById(
-                'action.apply.newRevisionLabel',
-                // TODO: Format with localized date or use different identifier?
-                ['revision' => $revision->getLabel() ?: $revisionDate],
-                null,
-                null,
-                'Main',
-                'NEOSidekick.Revisions'
-            );
+            self::$appliedRevisions[$node->getIdentifier()] = $revision;
         } else {
             unset(self::$nodesForRevisions[$node->getIdentifier()]);
         }
@@ -954,7 +925,7 @@ class RevisionService
                     $this->logger->info(sprintf('Removing revisions for deleted node %s', $nodeToUse->getContextPath()));
                     // TODO: Remove revisions
                 } else {
-                    $this->createRevision($nodeToUse, self::$revisionLabels[$identifier] ?? null);
+                    $this->createRevisionInternal($nodeToUse, null, self::$appliedRevisions[$identifier] ?? null);
                 }
             }
         }

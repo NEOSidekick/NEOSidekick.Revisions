@@ -57,6 +57,22 @@ class Revision
     protected $moved = false;
 
     /**
+     * The revision whose application created this one
+     *
+     * @var string
+     * @ORM\Column(nullable=true)
+     */
+    protected $appliedRevisionIdentifier;
+
+    /**
+     * Kept so the reference stays readable after the applied revision is flushed
+     *
+     * @var \DateTime
+     * @ORM\Column(nullable=true)
+     */
+    protected $appliedRevisionCreationDateTime;
+
+    /**
      * @Flow\Inject
      * @var PersistenceManagerInterface
      */
@@ -151,6 +167,22 @@ class Revision
     public function isMoved(): bool
     {
         return $this->moved;
+    }
+
+    public function setAppliedRevision(Revision $appliedRevision): void
+    {
+        $this->appliedRevisionIdentifier = $appliedRevision->getIdentifier();
+        $this->appliedRevisionCreationDateTime = clone $appliedRevision->getCreationDateTime();
+    }
+
+    public function getAppliedRevisionIdentifier(): ?string
+    {
+        return $this->appliedRevisionIdentifier;
+    }
+
+    public function getAppliedRevisionCreationDateTime(): ?\DateTime
+    {
+        return $this->appliedRevisionCreationDateTime;
     }
 
 }

@@ -6,7 +6,7 @@ import Node from '../Interfaces/Node';
 import fetchFromBackend from '../Api/fetch';
 import ContentChangeDiff from './ContentChangeDiff';
 import ErrorBoundary from './ErrorBoundary';
-import { formatRevisionDate } from '../Helpers/format';
+import { formatRevisionDate, formatRevisionLabel } from '../Helpers/format';
 
 type RevisionDiffProps = {
     documentNode: Node;
@@ -31,7 +31,7 @@ const RevisionDiff: React.FC<RevisionDiffProps> = ({
 
     const version = useMemo(
         () =>
-            revision ? revision.label ||
+            revision ? formatRevisionLabel(revision, translate) ||
             translate('revision.label', `By ${revision.creator}`, {
                 creator: revision.creator,
             }) : '',
