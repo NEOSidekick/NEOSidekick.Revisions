@@ -71,8 +71,10 @@ export default class RevisionsView extends PureComponent<{
             contentDimensions,
         } = this.props;
 
+        // A new list for every document, so no callback, dialog or diff keeps the previous document
         return (
             <RevisionList
+                key={documentNode.contextPath}
                 documentNode={documentNode}
                 addFlashMessage={addFlashMessage}
                 reloadDocument={reloadDocument}

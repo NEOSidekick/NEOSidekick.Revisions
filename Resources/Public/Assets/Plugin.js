@@ -842,6 +842,7 @@
         const [selectedRevision, setSelectedRevision] = (0, import_react14.useState)(null);
         const [isLoading, setIsLoading] = (0, import_react14.useState)(true);
         const [resolutionRequest, setResolutionRequest] = (0, import_react14.useState)(null);
+        const isDiffShown = (0, import_react14.useRef)(false);
         const translate = (0, import_react14.useCallback)(
           (id, fallback = "", params = [], packageKey = "NEOSidekick.Revisions", sourceName = "Main") => {
             return i18nRegistry.translate(id, fallback, params, packageKey, sourceName);
@@ -945,6 +946,7 @@
           [selectedRevision]
         );
         const showRevision = (0, import_react14.useCallback)((revision) => {
+          isDiffShown.current = !!revision;
           if (!revision) {
             renderSecondaryInspector(null, null);
           } else {
@@ -962,6 +964,14 @@
           }
         }, []);
         (0, import_react14.useEffect)(fetchRevisions, [documentNode]);
+        (0, import_react14.useEffect)(
+          () => () => {
+            if (isDiffShown.current) {
+              renderSecondaryInspector(null, null);
+            }
+          },
+          []
+        );
         return /* @__PURE__ */ import_react14.default.createElement("div", null, resolutionRequest && /* @__PURE__ */ import_react14.default.createElement(
           ResolutionDialog_default,
           {
@@ -1028,6 +1038,7 @@
           return /* @__PURE__ */ import_react15.default.createElement(
             RevisionList_default,
             {
+              key: documentNode.contextPath,
               documentNode,
               addFlashMessage,
               reloadDocument,

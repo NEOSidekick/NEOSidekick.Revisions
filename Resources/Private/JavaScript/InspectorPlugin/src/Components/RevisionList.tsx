@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Icon } from '@neos-project/react-ui-components';
 
 import Node from '../Interfaces/Node';
@@ -47,6 +47,7 @@ const RevisionList: React.FC<Props> = ({
     const [selectedRevision, setSelectedRevision] = useState<Revision>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [resolutionRequest, setResolutionRequest] = useState<ResolutionRequest>(null);
+    const isDiffShown = useRef(false);
 
     const translate = useCallback(
         (
@@ -178,6 +179,7 @@ const RevisionList: React.FC<Props> = ({
     );
 
     const showRevision = useCallback((revision?: Revision) => {
+        isDiffShown.current = !!revision;
         if (!revision) {
             renderSecondaryInspector(null, null);
         } else {
@@ -195,6 +197,16 @@ const RevisionList: React.FC<Props> = ({
     }, []);
 
     useEffect(fetchRevisions, [documentNode]);
+
+    // The list is replaced for another document, and the diff of this document must not stay open next to it
+    useEffect(
+        () => () => {
+            if (isDiffShown.current) {
+                renderSecondaryInspector(null, null);
+            }
+        },
+        []
+    );
 
     return (
         <div>
