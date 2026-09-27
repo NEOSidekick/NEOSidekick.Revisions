@@ -14,29 +14,50 @@ namespace NEOSidekick\Revisions\Exception;
  */
 
 /**
- * The revision cannot be applied, not even when forced, e.g. because a node type no longer exists
+ * The revision cannot be applied without further resolutions, or not at all, e.g. because a node type no longer exists
  */
 class RevisionNotApplicableException extends \Neos\Flow\Exception
 {
     /**
-     * @var array<string>
+     * @var array<array>
      */
-    protected $problems;
+    protected $rows;
 
     /**
-     * @param array<string> $problems
+     * @var array<string>
      */
-    public function __construct(array $problems)
+    protected $errors;
+
+    /**
+     * @param array<array> $rows The nodes that need a resolution and those that got one, see RevisionService::validateRevision()
+     * @param array<string> $errors Problems no resolution can fix
+     */
+    public function __construct(array $rows, array $errors)
     {
-        parent::__construct(implode("\n", $problems), 1790500001);
-        $this->problems = $problems;
+        $messages = $errors;
+        foreach ($rows as $row) {
+            if ($row['resolution'] === null) {
+                $messages = array_merge($messages, array_column($row['problems'], 'message'));
+            }
+        }
+        parent::__construct(implode("\n", $messages), 1790500001);
+        $this->rows = $rows;
+        $this->errors = $errors;
+    }
+
+    /**
+     * @return array<array>
+     */
+    public function getRows(): array
+    {
+        return $this->rows;
     }
 
     /**
      * @return array<string>
      */
-    public function getProblems(): array
+    public function getErrors(): array
     {
-        return $this->problems;
+        return $this->errors;
     }
 }

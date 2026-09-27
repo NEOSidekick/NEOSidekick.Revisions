@@ -116,17 +116,9 @@
                 <source>An error occurred while deleting a revision.</source>
                 <target>Beim Löschen einer Revision ist ein Fehler aufgetreten.</target>
             </trans-unit>
-            <trans-unit id="error.verifyResolveConflicts">
-                <source>Some conflicts were detected. Do you still want to apply the revision?{conflicts}</source>
-                <target>Es wurden einige Konflikte festgestellt. Möchten Sie die Revision trotzdem anwenden?{conflicts}</target>
-            </trans-unit>
             <trans-unit id="error.revisionNotFound">
                 <source>Revision not found</source>
                 <target>Revision nicht gefunden</target>
-            </trans-unit>
-            <trans-unit id="error.revisionHasConflicts">
-                <source>Revision has conflicts</source>
-                <target>Revision hat Konflikte</target>
             </trans-unit>
             <trans-unit id="error.nodeNotFound">
                 <source>Page not found</source>
@@ -143,6 +135,71 @@
             <trans-unit id="error.revisionApplyDenied">
                 <source>Not allowed to apply the revision</source>
                 <target>Keine Berechtigung, diese Revision anzuwenden</target>
+            </trans-unit>
+
+            <trans-unit id="resolution.title">
+                <source>Decide how to apply the revision</source>
+                <target>Entscheiden, wie die Revision angewandt wird</target>
+            </trans-unit>
+            <trans-unit id="resolution.description">
+                <source>Some content changed since the revision in a way that needs a decision.</source>
+                <target>Einige Inhalte haben sich seit der Revision so verändert, dass eine Entscheidung nötig ist.</target>
+            </trans-unit>
+            <trans-unit id="resolution.errors">
+                <source>The revision cannot be applied like this:</source>
+                <target>So kann die Revision nicht angewandt werden:</target>
+            </trans-unit>
+            <trans-unit id="resolution.apply">
+                <source>Apply revision</source>
+                <target>Revision anwenden</target>
+            </trans-unit>
+            <trans-unit id="resolution.cancel">
+                <source>Cancel</source>
+                <target>Abbrechen</target>
+            </trans-unit>
+            <trans-unit id="resolution.problem.nodeTypeMissing">
+                <source>The node type "{nodeType}" no longer exists.</source>
+                <target>Den Inhaltstyp "{nodeType}" gibt es nicht mehr.</target>
+            </trans-unit>
+            <trans-unit id="resolution.problem.nodeTypeNotAllowed">
+                <source>The node type "{nodeType}" is no longer allowed here.</source>
+                <target>Der Inhaltstyp "{nodeType}" ist hier nicht mehr erlaubt.</target>
+            </trans-unit>
+            <trans-unit id="resolution.problem.parentMissing">
+                <source>The place of this content in the revision no longer exists.</source>
+                <target>Die Stelle dieses Inhalts in der Revision gibt es nicht mehr.</target>
+            </trans-unit>
+            <trans-unit id="resolution.problem.movedAway">
+                <source>Moved to the page "{document}" since the revision.</source>
+                <target>Seit der Revision auf die Seite "{document}" verschoben.</target>
+            </trans-unit>
+            <trans-unit id="resolution.problem.movedAway.unknown">
+                <source>Moved to an unknown place since the revision.</source>
+                <target>Seit der Revision an einen unbekannten Ort verschoben.</target>
+            </trans-unit>
+            <trans-unit id="resolution.problem.movedHere">
+                <source>Moved to this page since the revision.</source>
+                <target>Seit der Revision auf diese Seite verschoben.</target>
+            </trans-unit>
+            <trans-unit id="resolution.choice.skip">
+                <source>Skip</source>
+                <target>Überspringen</target>
+            </trans-unit>
+            <trans-unit id="resolution.choice.leaveThere">
+                <source>Leave there</source>
+                <target>Dort lassen</target>
+            </trans-unit>
+            <trans-unit id="resolution.choice.keep">
+                <source>Keep</source>
+                <target>Behalten</target>
+            </trans-unit>
+            <trans-unit id="resolution.choice.moveBack">
+                <source>Move back</source>
+                <target>Zurückverschieben</target>
+            </trans-unit>
+            <trans-unit id="resolution.choice.remove">
+                <source>Remove</source>
+                <target>Entfernen</target>
             </trans-unit>
 
             <trans-unit id="confirm.applyRevision">

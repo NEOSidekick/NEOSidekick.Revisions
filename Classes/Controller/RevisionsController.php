@@ -86,36 +86,33 @@ class RevisionsController extends ActionController
         ]);
     }
 
-    public function applyAction(NodeInterface $node = null, Revision $revision = null, bool $force = false): void
+    /**
+     * @param array $resolutions By node identifier, sent in the JSON body, see RevisionService::validateRevision()
+     * @throws StopActionException
+     */
+    public function applyAction(NodeInterface $node = null, Revision $revision = null, array $resolutions = []): void
     {
         if (!$node) {
             $this->throwStatus(404, $this->translate('error.nodeNotFound', 'Page not found'));
         }
 
-        if (!$revision) {
+        // A revision is only applied to the document it belongs to, at the place that document has now
+        if (!$revision || $revision->getNodeIdentifier() !== $node->getIdentifier()) {
             $this->throwStatus(404, $this->translate('error.revisionNotFound', 'Revision not found'));
         }
 
-        // Checked before the conflicts, which can be forced, while these cannot
-        $problems = $this->revisionService->validateRevision($revision);
-        if ($problems) {
-            $this->throwStatus(422, $this->translate('error.revisionNotApplicable', 'Revision cannot be applied'), json_encode($problems, JSON_PRETTY_PRINT));
-        }
-
-        if (!$force) {
-            $conflicts = $this->revisionService->checkRevisionForConflicts($revision);
-
-            if ($conflicts) {
-                $this->throwStatus(409, $this->translate('error.revisionHasConflicts', 'Revision has conflicts'), json_encode($conflicts, JSON_PRETTY_PRINT));
-            }
+        // Checked before applying, which already recreates deleted assets while reading the revision
+        $validation = $this->revisionService->validateRevision($revision, $resolutions);
+        if (!$validation['isApplicable']) {
+            $this->throwStatus(422, $this->translate('error.revisionNotApplicable', 'Revision cannot be applied'), json_encode(['rows' => $validation['rows'], 'errors' => $validation['errors']], JSON_PRETTY_PRINT));
         }
 
         try {
-            $result = $this->revisionService->applyRevision($revision->getIdentifier(), $node->getParentPath());
+            $result = $this->revisionService->applyRevision($revision->getIdentifier(), $resolutions);
         } catch (RevisionApplyDeniedException $exception) {
-            $this->throwStatus(403, $this->translate('error.revisionApplyDenied', 'Not allowed to apply the revision'), json_encode([$exception->getMessage()], JSON_PRETTY_PRINT));
+            $this->throwStatus(403, $this->translate('error.revisionApplyDenied', 'Not allowed to apply the revision'), json_encode(['rows' => [], 'errors' => [$exception->getMessage()]], JSON_PRETTY_PRINT));
         } catch (RevisionNotApplicableException $exception) {
-            $this->throwStatus(422, $this->translate('error.revisionNotApplicable', 'Revision cannot be applied'), json_encode($exception->getProblems(), JSON_PRETTY_PRINT));
+            $this->throwStatus(422, $this->translate('error.revisionNotApplicable', 'Revision cannot be applied'), json_encode(['rows' => $exception->getRows(), 'errors' => $exception->getErrors()], JSON_PRETTY_PRINT));
         }
 
         if (!$result) {
@@ -133,7 +130,7 @@ class RevisionsController extends ActionController
             $this->throwStatus(404, $this->translate('error.nodeNotFound', 'Page not found'));
         }
 
-        if (!$revision) {
+        if (!$revision || $revision->getNodeIdentifier() !== $node->getIdentifier()) {
             $this->throwStatus(404, $this->translate('error.revisionNotFound', 'Revision not found'));
         }
 

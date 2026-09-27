@@ -89,14 +89,8 @@
             <trans-unit id="error.failedDeletingRevision">
                 <source>An error occurred while deleting a revision.</source>
             </trans-unit>
-            <trans-unit id="error.verifyResolveConflicts">
-                <source>Some conflicts were detected. Do you still want to apply the revision?{conflicts}</source>
-            </trans-unit>
             <trans-unit id="error.revisionNotFound">
                 <source>Revision not found</source>
-            </trans-unit>
-            <trans-unit id="error.revisionHasConflicts">
-                <source>Revision has conflicts</source>
             </trans-unit>
             <trans-unit id="error.nodeNotFound">
                 <source>Page not found</source>
@@ -109,6 +103,55 @@
             </trans-unit>
             <trans-unit id="error.revisionApplyDenied">
                 <source>Not allowed to apply the revision</source>
+            </trans-unit>
+
+            <trans-unit id="resolution.title">
+                <source>Decide how to apply the revision</source>
+            </trans-unit>
+            <trans-unit id="resolution.description">
+                <source>Some content changed since the revision in a way that needs a decision.</source>
+            </trans-unit>
+            <trans-unit id="resolution.errors">
+                <source>The revision cannot be applied like this:</source>
+            </trans-unit>
+            <trans-unit id="resolution.apply">
+                <source>Apply revision</source>
+            </trans-unit>
+            <trans-unit id="resolution.cancel">
+                <source>Cancel</source>
+            </trans-unit>
+            <trans-unit id="resolution.problem.nodeTypeMissing">
+                <source>The node type "{nodeType}" no longer exists.</source>
+            </trans-unit>
+            <trans-unit id="resolution.problem.nodeTypeNotAllowed">
+                <source>The node type "{nodeType}" is no longer allowed here.</source>
+            </trans-unit>
+            <trans-unit id="resolution.problem.parentMissing">
+                <source>The place of this content in the revision no longer exists.</source>
+            </trans-unit>
+            <trans-unit id="resolution.problem.movedAway">
+                <source>Moved to the page "{document}" since the revision.</source>
+            </trans-unit>
+            <trans-unit id="resolution.problem.movedAway.unknown">
+                <source>Moved to an unknown place since the revision.</source>
+            </trans-unit>
+            <trans-unit id="resolution.problem.movedHere">
+                <source>Moved to this page since the revision.</source>
+            </trans-unit>
+            <trans-unit id="resolution.choice.skip">
+                <source>Skip</source>
+            </trans-unit>
+            <trans-unit id="resolution.choice.leaveThere">
+                <source>Leave there</source>
+            </trans-unit>
+            <trans-unit id="resolution.choice.keep">
+                <source>Keep</source>
+            </trans-unit>
+            <trans-unit id="resolution.choice.moveBack">
+                <source>Move back</source>
+            </trans-unit>
+            <trans-unit id="resolution.choice.remove">
+                <source>Remove</source>
             </trans-unit>
 
             <trans-unit id="confirm.applyRevision">
