@@ -910,10 +910,16 @@ class RevisionService
             $nodeName = NodePaths::getNodeNameFromPath($nodeData['path']);
 
             $node = $context->getNodeByIdentifier($nodeData['identifier']);
-            // A variant only visible through a fallback dimension is created where the revision has it: creating it at
-            // the fallback's place and moving it would take the fallback's child nodes along
-            if ($node === null || !$this->isVariantOfContext($node)) {
+            if ($node === null) {
                 $node = $this->getParentNode($context, $nodeData)->createNode($nodeName, $nodeType, $nodeData['identifier']);
+            } elseif (!$this->isVariantOfContext($node)) {
+                // Only visible through a fallback dimension. createVariantForContext() turns the node already known to the
+                // context into the new variant, adoptNode() would also trigger translation integrations. The variant is
+                // created at the fallback's place, so its node data is put where the revision has it: moving the node
+                // would take the fallback's child nodes along.
+                $node = $node->createVariantForContext($context);
+                $node->getNodeData()->setPath($nodeData['path']);
+                $context->getFirstLevelNodeCache()->flush();
             }
 
             // Only differences are written, so unchanged variants are neither published nor reindexed, and node
