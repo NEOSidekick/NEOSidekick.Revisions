@@ -443,6 +443,7 @@ class RevisionService
         $rows = [];
         $errors = [];
         $movedAway = [];
+        $variantsWithNodeTypeProblems = [];
         $nodeTypeNamesByPath = [];
         foreach ($nodesInRevision as $nodeData) {
             if ($nodeData['removed']) {
@@ -470,6 +471,7 @@ class RevisionService
             }
             $relativePath = $this->getRelativePath($nodeData['path'], $documentPaths[$dimensionsHash] ?? $documentNode->getPath());
             if ($problem !== null) {
+                $variantsWithNodeTypeProblems[$this->getVariantKey($nodeData)] = true;
                 $this->addRow($rows, $identifier, $existingNode !== null ? $existingNode->getLabel() : '', $nodeData['nodeType'], $relativePath, $nodeData['dimensionValues'], $problem, $nodeData['path']);
             }
             $closestDocument = $existingNode !== null ? $this->getClosestDocumentNode($existingNode) : null;
@@ -477,7 +479,6 @@ class RevisionService
                 $movedAway[$identifier]['variants'][$this->getVariantKey($nodeData)] = [$nodeData, $existingNode, $closestDocument, $relativePath];
             }
         }
-        $identifiersWithNodeTypeProblems = array_fill_keys(array_keys($rows), true);
 
         foreach ($movedAway as $identifier => $moved) {
             foreach ($moved['variants'] as $variantKey => [, $existingNode]) {
@@ -502,7 +503,7 @@ class RevisionService
                         : sprintf('The content "%s" was moved to an unknown page', $existingNode->getLabel()),
                 ], $nodeData['path']);
                 $rows[$identifier]['document'] = $closestDocument !== null ? ['identifier' => $closestDocument->getIdentifier(), 'label' => $closestDocument->getLabel()] : null;
-                $this->collectContentMovedHere($existingNode, $variantsInRevision, $revisionDate, [$identifier], [], $identifier, $candidates);
+                $this->collectContentMovedHere($existingNode, $variantsInRevision, $revisionDate, [$identifier], [], $variantKey, $candidates);
             }
         }
         foreach ($this->getDocumentVariants($documentIdentifier, $liveWorkspace) as $documentVariant) {
@@ -517,44 +518,49 @@ class RevisionService
             }
         }
 
-        // A variant inside a skipped node stays where it is, so moving back is judged by the variants it would move
-        $skippedPaths = $this->getSkippedPaths($revisionVariants, $choices);
-        foreach ($movedAway as $identifier => $moved) {
-            $movedVariants = [];
-            foreach (array_keys($moved['ownVariants'] ?? []) as $variantKey) {
-                $nodeData = $moved['variants'][$variantKey][0];
-                if (!$this->isInsideSkippedNode($nodeData['path'], Utility::sortDimensionValueArrayAndReturnDimensionsHash($nodeData['dimensionValues']), $skippedPaths)) {
-                    $movedVariants[$variantKey] = true;
+        // A variant inside a skipped node stays where it is, so moving back is judged by the variants it would move. A skip
+        // that a move back rules out frees variants, which are judged again until nothing changes.
+        do {
+            $isChanged = false;
+            $skippedPaths = $this->getSkippedPaths($revisionVariants, $choices);
+            foreach ($movedAway as $identifier => $moved) {
+                $movedVariants = [];
+                foreach (array_keys($moved['ownVariants'] ?? []) as $variantKey) {
+                    $nodeData = $moved['variants'][$variantKey][0];
+                    if (!$this->isInsideSkippedNode($nodeData['path'], Utility::sortDimensionValueArrayAndReturnDimensionsHash($nodeData['dimensionValues']), $skippedPaths)) {
+                        $movedVariants[$variantKey] = true;
+                    }
                 }
+                $movedAway[$identifier]['movedVariants'] = $movedVariants;
+                $movedAway[$identifier]['cannotMoveBackBecause'] = $this->findMoveBackObstacle($identifier, $movedVariants, $moved, $variantsWithNodeTypeProblems, $liveWorkspace);
             }
-            $movedAway[$identifier]['movedVariants'] = $movedVariants;
-            $movedAway[$identifier]['cannotMoveBackBecause'] = $this->findMoveBackObstacle($identifier, $movedVariants, $moved, $identifiersWithNodeTypeProblems, $liveWorkspace);
-        }
-        foreach ($choices as $identifier => $choice) {
-            if ($choice !== self::RESOLUTION_MOVE_BACK) {
-                continue;
-            }
-            if ($movedAway[$identifier]['cannotMoveBackBecause'] !== null) {
-                $errors[] = sprintf('Node "%s" cannot be moved back, because %s', $identifier, $movedAway[$identifier]['cannotMoveBackBecause']);
-                unset($choices[$identifier]);
-                continue;
-            }
-            // Skipping leaves live as it is, which content moving back along with this node would not be
-            foreach (array_keys($movedAway[$identifier]['movedVariants']) as $movedVariant) {
-                foreach (array_keys($movedAway[$identifier]['subtrees'][$movedVariant]) as $descendantVariant) {
-                    $descendantIdentifier = $this->getIdentifierOfVariant($descendantVariant);
-                    if (($choices[$descendantIdentifier] ?? null) === self::RESOLUTION_SKIP && !isset($candidates[$descendantIdentifier]['variants'][$descendantVariant])) {
-                        $errors[] = sprintf('Node "%s" cannot be skipped, because it moves back along with node "%s"', $descendantIdentifier, $identifier);
-                        unset($choices[$descendantIdentifier]);
+            foreach ($choices as $identifier => $choice) {
+                if ($choice !== self::RESOLUTION_MOVE_BACK) {
+                    continue;
+                }
+                if ($movedAway[$identifier]['cannotMoveBackBecause'] !== null) {
+                    $errors[] = sprintf('Node "%s" cannot be moved back, because %s', $identifier, $movedAway[$identifier]['cannotMoveBackBecause']);
+                    unset($choices[$identifier]);
+                    $isChanged = true;
+                    continue;
+                }
+                // Skipping leaves live as it is, which content moving back along with this node would not be
+                foreach (array_keys($movedAway[$identifier]['movedVariants']) as $movedVariant) {
+                    foreach (array_keys($movedAway[$identifier]['subtrees'][$movedVariant]) as $descendantVariant) {
+                        $descendantIdentifier = $this->getIdentifierOfVariant($descendantVariant);
+                        if (($choices[$descendantIdentifier] ?? null) === self::RESOLUTION_SKIP && !isset($candidates[$descendantIdentifier]['variants'][$descendantVariant])) {
+                            $errors[] = sprintf('Node "%s" cannot be skipped, because it moves back along with node "%s"', $descendantIdentifier, $identifier);
+                            unset($choices[$descendantIdentifier]);
+                            $isChanged = true;
+                        }
                     }
                 }
             }
-        }
+        } while ($isChanged);
 
         $keptIdentifiers = array_fill_keys(array_keys(array_filter($choices, static function (string $choice): bool {
             return $choice === self::RESOLUTION_SKIP;
         })), true);
-        $skippedPaths = $this->getSkippedPaths($revisionVariants, $choices);
         $variantsToMoveBack = [];
         foreach ($choices as $identifier => $choice) {
             if ($choice === self::RESOLUTION_MOVE_BACK) {
@@ -575,7 +581,7 @@ class RevisionService
         $protectedVariants = [];
         foreach ($candidates as $identifier => $candidate) {
             foreach ($candidate['variants'] as $candidateVariant) {
-                $isComingHere = $candidateVariant['movedWith'] === null || ($choices[$candidateVariant['movedWith']] ?? null) === self::RESOLUTION_MOVE_BACK;
+                $isComingHere = $candidateVariant['movedWith'] === null || isset($variantsToMoveBack[$candidateVariant['movedWith']]);
                 if (!$isComingHere || array_intersect_key(array_flip($candidateVariant['ancestors']), $keptIdentifiers) !== []) {
                     continue;
                 }
@@ -644,22 +650,19 @@ class RevisionService
      *
      * @param array<string, bool> $movedVariants The variants of the node that moving it back would move
      * @param array<string, mixed> $moved What resolveRevision() found about the node moved away
-     * @param array<string, bool> $identifiersWithNodeTypeProblems
+     * @param array<string, bool> $variantsWithNodeTypeProblems
      */
-    protected function findMoveBackObstacle(string $identifier, array $movedVariants, array $moved, array $identifiersWithNodeTypeProblems, Workspace $liveWorkspace): ?string
+    protected function findMoveBackObstacle(string $identifier, array $movedVariants, array $moved, array $variantsWithNodeTypeProblems, Workspace $liveWorkspace): ?string
     {
-        $subtree = [];
         $paths = [];
-        $hasUnresolvedNodeType = false;
         foreach (array_keys($movedVariants) as $variantKey) {
-            $subtree += $moved['subtrees'][$variantKey];
+            // Moving rewrites the node data inside, which replaces a node type that no longer exists with the fallback
+            // node type, and content inside can no longer be skipped
+            if ($moved['hasUnresolvedNodeType'][$variantKey] || isset($variantsWithNodeTypeProblems[$variantKey])
+                || array_intersect_key($moved['subtrees'][$variantKey], $variantsWithNodeTypeProblems) !== []) {
+                return 'its node type or one inside it no longer fits';
+            }
             $paths[] = $moved['variants'][$variantKey][0]['path'];
-            $hasUnresolvedNodeType = $hasUnresolvedNodeType || $moved['hasUnresolvedNodeType'][$variantKey];
-        }
-        // Moving rewrites the node data inside, which replaces a node type that no longer exists with the fallback node
-        // type, and content inside can no longer be skipped
-        if ($hasUnresolvedNodeType || isset($identifiersWithNodeTypeProblems[$identifier]) || array_intersect_key($this->getIdentifiersOfVariants($subtree), $identifiersWithNodeTypeProblems) !== []) {
-            return 'its node type or one inside it no longer fits';
         }
         if ($this->isPlaceTakenByAnotherNode($paths, $identifier, $liveWorkspace)) {
             return 'another node has its place now';
@@ -792,7 +795,7 @@ class RevisionService
         }
         $choices = [self::RESOLUTION_SKIP];
         // A node whose variants need different resolutions can only be left as it is
-        if (isset($problems['movedAway']) && !isset($problems['movedHere']) && $canMoveBack) {
+        if (isset($problems['movedAway']) && count($problems) === 1 && $canMoveBack) {
             $choices[] = self::RESOLUTION_MOVE_BACK;
         }
         if (isset($problems['movedHere']) && count($problems) === 1) {
@@ -837,7 +840,7 @@ class RevisionService
      * @param array<string, bool> $variantsInRevision
      * @param array<string> $ancestorIdentifiers
      * @param array<string> $youngAncestorVariants The variants created after the revision that the content is inside
-     * @param string|null $movedWith The node moved away since the revision that the content would come back with
+     * @param string|null $movedWith The variant moved away since the revision that the content would come back with
      * @param array<string, array> $candidates By identifier, with the variants by identifier and dimensions hash
      */
     protected function collectContentMovedHere(NodeInterface $parentNode, array $variantsInRevision, \DateTimeInterface $revisionDate, array $ancestorIdentifiers, array $youngAncestorVariants, ?string $movedWith, array &$candidates): void
@@ -915,19 +918,6 @@ class RevisionService
     protected function getIdentifierOfVariant(string $variantKey): string
     {
         return substr($variantKey, 0, (int)strrpos($variantKey, '@'));
-    }
-
-    /**
-     * @param array<string, bool> $variants By identifier and dimensions hash
-     * @return array<string, bool>
-     */
-    protected function getIdentifiersOfVariants(array $variants): array
-    {
-        $identifiers = [];
-        foreach (array_keys($variants) as $variantKey) {
-            $identifiers[$this->getIdentifierOfVariant((string)$variantKey)] = true;
-        }
-        return $identifiers;
     }
 
     /**
