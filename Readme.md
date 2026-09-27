@@ -77,6 +77,7 @@ NEOSidekick:
       enabled: true # Enables compression of revision xml content in the database        
     revisions:
       createRevisionAfterApply: true # Create a revision after applying a revision
+      applyWithoutAuthorizationChecks: true # Ignore the editor's node privileges when applying a revision
 
 Neos:
   Neos:
@@ -85,6 +86,22 @@ Neos:
         NEOSidekick.Revisions:
           showDeleteButton: false # Show the delete button in the revisions list
 ```
+
+## Applying a revision
+
+Applying a revision publishes the restored page to live like an editor would. Every package that listens to node
+or publishing signals, such as search indexing, frontend revalidation or automatic translation, behaves as for a
+manual publish.
+
+A revision is refused, with a list of the reasons, if one of its node types no longer exists or if a node it would
+create, move back or retype is no longer allowed in its parent.
+
+By default the editor's node privileges are not evaluated, as in version 1.1.0. With
+`applyWithoutAuthorizationChecks: false`, applying a revision that would change a node the editor may not edit is
+refused as a whole, before anything is published. The CLI command always applies without authorization checks.
+
+Integrators who need a different behaviour during an apply can connect to the signals `revisionApplying` and
+`revisionApplied` of `NEOSidekick\Revisions\Service\RevisionService`.
 
 ## License
 

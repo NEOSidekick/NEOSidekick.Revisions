@@ -5,6 +5,9 @@ NEOSidekick:
       enabled: false # Enables compression of revision xml content in the database
     revisions:
       createRevisionAfterApply: true # Create a revision after applying a revision
+      # Applies a revision without evaluating the editor's node privileges, like version 1.1.0 did.
+      # If false, an apply that would change a node the editor may not edit is refused as a whole.
+      applyWithoutAuthorizationChecks: true
 Neos:
   Neos:
     Ui:

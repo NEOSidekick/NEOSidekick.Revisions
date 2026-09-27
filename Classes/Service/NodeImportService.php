@@ -22,27 +22,17 @@ use Neos\Flow\Annotations as Flow;
 class NodeImportService extends \Neos\ContentRepository\Domain\Service\ImportExport\NodeImportService
 {
 
-    /** @var array<string> */
-    protected $persistedNodeIdentifiers = [];
-
     protected $nodesInImport = [];
 
-    protected $logNodesInImport = false;
-
     /**
-     * Persist the nodedata like the parent class does but store the persisted node identifier for later use.
-     * If `logNodesInImport` is set to true, the node data will be logged to the console instead of being persisted.
+     * Collects the node data instead of writing it into the live workspace with SQL,
+     * revisions are applied through a workspace, see RevisionService::applyRevision()
      *
      * @inheritDoc
      */
     protected function persistNodeData($nodeData): void
     {
-        if ($this->logNodesInImport) {
-            $this->nodesInImport[] = $nodeData;
-        } else {
-            $this->persistedNodeIdentifiers[] = $nodeData['identifier'];
-            parent::persistNodeData($nodeData);
-        }
+        $this->nodesInImport[] = $nodeData;
     }
 
     /**
@@ -94,18 +84,19 @@ class NodeImportService extends \Neos\ContentRepository\Domain\Service\ImportExp
     }
 
     /**
-     * @return array<string>
+     * @return array<array> The node data of all variants, parents before their children
+     * @throws ImportException if the XML cannot be read completely
      */
-    public function getPersistedNodeIdentifiers(): array
+    public function parseNodes(\XMLReader $xmlReader, string $targetPath): array
     {
-        return $this->persistedNodeIdentifiers;
+        $this->nodesInImport = [];
+        $this->import($xmlReader, $targetPath);
+        return $this->nodesInImport;
     }
 
     public function getNodesInImport(\XMLReader $xmlReader, $targetPath, $resourceLoadPath = null): array
     {
-        $this->persistedNodeIdentifiers = [];
         $this->nodesInImport = [];
-        $this->logNodesInImport = true;
         try {
             $this->import($xmlReader, $targetPath, $resourceLoadPath);
         } catch (\Exception $e) {

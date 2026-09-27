@@ -20,7 +20,6 @@ use Neos\ContentRepository\Domain\Model\Workspace;
 use Neos\ContentRepository\Domain\Repository\NodeDataRepository;
 use Neos\ContentRepository\Domain\Service\ContentDimensionCombinator;
 use Neos\Flow\Annotations as Flow;
-use Psr\Log\LoggerInterface;
 
 /**
  * @Flow\Scope("singleton")
@@ -33,12 +32,6 @@ class NodeService
      * @var NodeDataRepository
      */
     protected $nodeDataRepository;
-
-    /**
-     * @Flow\Inject
-     * @var LoggerInterface
-     */
-    protected $logger;
 
     /**
      * @Flow\Inject
@@ -91,16 +84,5 @@ class NodeService
             false,
             $recursive
         );
-    }
-
-    /**
-     * @param array<NodeData> $unknownNodes
-     */
-    public function removeNodes(array $unknownNodes): void
-    {
-        foreach ($unknownNodes as $unknownNode) {
-            $this->logger->warning(sprintf('Removing unknown node "%s" during revision application', $unknownNode->getPath()));
-            $this->nodeDataRepository->remove($unknownNode);
-        }
     }
 }

@@ -14,6 +14,8 @@ namespace NEOSidekick\Revisions\Controller;
  */
 
 use NEOSidekick\Revisions\Domain\Model\Revision;
+use NEOSidekick\Revisions\Exception\RevisionApplyDeniedException;
+use NEOSidekick\Revisions\Exception\RevisionNotApplicableException;
 use NEOSidekick\Revisions\Service\RevisionService;
 use Neos\ContentRepository\Domain\Model\NodeInterface;
 use Neos\Diff\Renderer\Html\HtmlArrayRenderer;
@@ -77,6 +79,12 @@ class RevisionsController extends ActionController
             $this->throwStatus(404, $this->translate('error.revisionNotFound', 'Revision not found'));
         }
 
+        // Checked before the conflicts, which can be forced, while these cannot
+        $problems = $this->revisionService->validateRevision($revision);
+        if ($problems) {
+            $this->throwStatus(422, $this->translate('error.revisionNotApplicable', 'Revision cannot be applied'), json_encode($problems, JSON_PRETTY_PRINT));
+        }
+
         if (!$force) {
             $conflicts = $this->revisionService->checkRevisionForConflicts($revision);
 
@@ -85,7 +93,13 @@ class RevisionsController extends ActionController
             }
         }
 
-        $result = $this->revisionService->applyRevision($revision->getIdentifier(), $node->getParentPath());
+        try {
+            $result = $this->revisionService->applyRevision($revision->getIdentifier(), $node->getParentPath());
+        } catch (RevisionApplyDeniedException $exception) {
+            $this->throwStatus(403, $this->translate('error.revisionApplyDenied', 'Not allowed to apply the revision'), json_encode([$exception->getMessage()], JSON_PRETTY_PRINT));
+        } catch (RevisionNotApplicableException $exception) {
+            $this->throwStatus(422, $this->translate('error.revisionNotApplicable', 'Revision cannot be applied'), json_encode($exception->getProblems(), JSON_PRETTY_PRINT));
+        }
 
         if (!$result) {
             $this->throwStatus(500, $this->translate('error.revisionNotApplied', 'Failed to apply revision'));
