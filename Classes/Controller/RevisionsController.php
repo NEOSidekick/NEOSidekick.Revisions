@@ -96,7 +96,8 @@ class RevisionsController extends ActionController
             $this->throwStatus(404, $this->translate('error.nodeNotFound', 'Page not found'));
         }
 
-        if (!$revision) {
+        // A revision is only applied to the document it belongs to, at the place that document has now
+        if (!$revision || $revision->getNodeIdentifier() !== $node->getIdentifier()) {
             $this->throwStatus(404, $this->translate('error.revisionNotFound', 'Revision not found'));
         }
 
@@ -107,7 +108,7 @@ class RevisionsController extends ActionController
         }
 
         try {
-            $result = $this->revisionService->applyRevision($revision->getIdentifier(), $node->getParentPath(), $resolutions);
+            $result = $this->revisionService->applyRevision($revision->getIdentifier(), $resolutions);
         } catch (RevisionApplyDeniedException $exception) {
             $this->throwStatus(403, $this->translate('error.revisionApplyDenied', 'Not allowed to apply the revision'), json_encode(['rows' => [], 'errors' => [$exception->getMessage()]], JSON_PRETTY_PRINT));
         } catch (RevisionNotApplicableException $exception) {
@@ -129,7 +130,7 @@ class RevisionsController extends ActionController
             $this->throwStatus(404, $this->translate('error.nodeNotFound', 'Page not found'));
         }
 
-        if (!$revision) {
+        if (!$revision || $revision->getNodeIdentifier() !== $node->getIdentifier()) {
             $this->throwStatus(404, $this->translate('error.revisionNotFound', 'Revision not found'));
         }
 

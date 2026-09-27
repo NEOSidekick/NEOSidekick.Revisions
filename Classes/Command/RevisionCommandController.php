@@ -177,7 +177,7 @@ class RevisionCommandController extends CommandController
 
         $this->outputLine('Applying revision "%s"', [$revisionIdentifier]);
         try {
-            $result = $this->revisionService->applyRevision($revisionIdentifier, $node->getParentPath(), $resolutionsByNode);
+            $result = $this->revisionService->applyRevision($revisionIdentifier, $resolutionsByNode);
         } catch (RevisionNotApplicableException | RevisionApplyDeniedException $exception) {
             $this->outputLine('Revision cannot be applied:');
             $this->outputLine($exception->getMessage());
@@ -258,7 +258,7 @@ class RevisionCommandController extends CommandController
             $problemIds = array_column($row['problems'], 'id');
             if (in_array('movedAway', $problemIds, true) && in_array(RevisionService::RESOLUTION_MOVE_BACK, $row['choices'], true)) {
                 $defaults[$row['identifier']] = ['resolution' => RevisionService::RESOLUTION_MOVE_BACK, 'row' => $row];
-            } elseif (in_array('movedHere', $problemIds, true)) {
+            } elseif (in_array('movedHere', $problemIds, true) && in_array(RevisionService::RESOLUTION_REMOVE, $row['choices'], true)) {
                 $defaults[$row['identifier']] = ['resolution' => RevisionService::RESOLUTION_REMOVE, 'row' => $row];
             }
         }
