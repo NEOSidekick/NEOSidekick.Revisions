@@ -491,6 +491,7 @@ class RevisionService
         $candidates = [];
         foreach ($movedAway as $identifier => $moved) {
             $ownSubtree = [];
+            $ownPaths = [];
             $hasUnresolvedNodeType = false;
             foreach ($moved['variants'] as $variantKey => [$nodeData, $existingNode, $closestDocument]) {
                 // A variant still inside a variant of a node that was moved away with it follows that node
@@ -499,6 +500,7 @@ class RevisionService
                 }
                 $movedAway[$identifier]['ownVariants'][$variantKey] = true;
                 $ownSubtree += $moved['subtrees'][$variantKey];
+                $ownPaths[$nodeData['path']] = true;
                 $hasUnresolvedNodeType = $hasUnresolvedNodeType || $moved['hasUnresolvedNodeType'][$variantKey];
                 $this->addRow($rows, $identifier, $existingNode->getLabel(), $nodeData['nodeType'], $this->getRelativePath($nodeData['path'], $documentPath), $nodeData['dimensionValues'], [
                     'id' => 'movedAway',
@@ -509,12 +511,16 @@ class RevisionService
                 $rows[$identifier]['document'] = $closestDocument !== null ? ['identifier' => $closestDocument->getIdentifier(), 'label' => $closestDocument->getLabel()] : null;
                 $this->collectContentMovedHere($existingNode, $variantsInRevision, $revisionDate, [$identifier], [], $identifier, $candidates);
             }
-            // Moving rewrites the node data inside, which replaces a node type that no longer exists with the fallback
-            // node type, and content inside can no longer be skipped
             $movedAway[$identifier]['ownSubtree'] = $ownSubtree;
-            $movedAway[$identifier]['canMoveBack'] = !$hasUnresolvedNodeType
-                && !isset($identifiersWithNodeTypeProblems[$identifier])
-                && array_intersect_key($this->getIdentifiersOfVariants($ownSubtree), $identifiersWithNodeTypeProblems) === [];
+            $movedAway[$identifier]['cannotMoveBackBecause'] = null;
+            if ($hasUnresolvedNodeType || isset($identifiersWithNodeTypeProblems[$identifier]) || array_intersect_key($this->getIdentifiersOfVariants($ownSubtree), $identifiersWithNodeTypeProblems) !== []) {
+                // Moving rewrites the node data inside, which replaces a node type that no longer exists with the
+                // fallback node type, and content inside can no longer be skipped
+                $movedAway[$identifier]['cannotMoveBackBecause'] = 'its node type or one inside it no longer fits';
+            } elseif ($this->isPlaceTakenByAnotherNode(array_keys($ownPaths), $identifier, $liveWorkspace)) {
+                $movedAway[$identifier]['cannotMoveBackBecause'] = 'another node has its place now';
+            }
+            $movedAway[$identifier]['canMoveBack'] = $movedAway[$identifier]['cannotMoveBackBecause'] === null;
         }
         foreach ($this->getDocumentVariants($documentIdentifier, $liveWorkspace) as $documentVariant) {
             $this->collectContentMovedHere($documentVariant, $variantsInRevision, $revisionDate, [], [], null, $candidates);
@@ -532,7 +538,7 @@ class RevisionService
                 continue;
             }
             if (!$movedAway[$identifier]['canMoveBack']) {
-                $errors[] = sprintf('Node "%s" cannot be moved back, because its node type or one inside it no longer fits', $identifier);
+                $errors[] = sprintf('Node "%s" cannot be moved back, because %s', $identifier, $movedAway[$identifier]['cannotMoveBackBecause']);
                 unset($choices[$identifier]);
                 continue;
             }
@@ -830,6 +836,23 @@ class RevisionService
             // Subtrees hold variants, so a node at the same path in another dimension does not match
             foreach (array_keys($identifiersByPath[$ancestorPath] ?? []) as $ancestorIdentifier) {
                 if (isset($movedAway[$ancestorIdentifier]['subtree'][$variantKey])) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Neos moves a node only to a path that no other node has, in any dimension
+     *
+     * @param array<string> $paths
+     */
+    protected function isPlaceTakenByAnotherNode(array $paths, string $identifier, Workspace $workspace): bool
+    {
+        foreach ($paths as $path) {
+            foreach ($this->nodeDataRepository->findByPathWithoutReduce($path, $workspace) as $nodeData) {
+                if ($nodeData->getIdentifier() !== $identifier) {
                     return true;
                 }
             }
