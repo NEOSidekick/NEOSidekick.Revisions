@@ -271,7 +271,7 @@ class RevisionService
 
         try {
             $nodesInRevision = $this->withConfiguredAuthorizationChecks(function () use ($revisionContent, $nodePath) {
-                return $this->nodeImportService->parseNodes($revisionContent, $nodePath);
+                return $this->nodeImportService->parseNodes($revisionContent, $nodePath, true);
             });
         } catch (\Throwable $throwable) {
             $this->logger->error(sprintf('Failed to read revision %s: %s', $revision->getIdentifier(), $throwable->getMessage()));
