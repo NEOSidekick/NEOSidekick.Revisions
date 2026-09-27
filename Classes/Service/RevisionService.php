@@ -424,14 +424,18 @@ class RevisionService
         $documentPath = $documentNode->getPath();
         $revisionDate = $revision->getCreationDateTime();
         $variantsInRevision = $this->getVariantsInRevision($nodesInRevision);
-        $pathsByIdentifier = [];
+        // Different nodes can have the same path in different dimensions
+        $revisionVariants = [];
         $identifiersByPath = [];
         foreach ($nodesInRevision as $nodeData) {
             if ($nodeData['removed']) {
                 continue;
             }
-            $pathsByIdentifier[$nodeData['identifier']][$nodeData['path']] = true;
-            $identifiersByPath[$nodeData['path']] = $nodeData['identifier'];
+            $revisionVariants[$nodeData['identifier']][$this->getVariantKey($nodeData)] = [
+                'path' => $nodeData['path'],
+                'dimensionsHash' => Utility::sortDimensionValueArrayAndReturnDimensionsHash($nodeData['dimensionValues']),
+            ];
+            $identifiersByPath[$nodeData['path']][$nodeData['identifier']] = true;
             if ($nodeData['identifier'] === $documentIdentifier) {
                 $documentPath = $nodeData['path'];
             }
@@ -439,6 +443,10 @@ class RevisionService
 
         $rows = [];
         $errors = [];
+        // The revision is read below the document's current parent, so only a renamed document ends up elsewhere
+        if ($documentPath !== $documentNode->getPath()) {
+            $errors[] = sprintf('The document is at "%s" now, the revision would move it to "%s"', $documentNode->getPath(), $documentPath);
+        }
         $movedAway = [];
         $nodeTypeNamesByPath = [];
         foreach ($nodesInRevision as $nodeData) {
@@ -461,7 +469,7 @@ class RevisionService
                 continue;
             }
             if ($problem !== null) {
-                $this->addRow($rows, $identifier, $existingNode !== null ? $existingNode->getLabel() : '', $nodeData['nodeType'], $this->getRelativePath($nodeData['path'], $documentPath), $nodeData['dimensionValues'], $problem);
+                $this->addRow($rows, $identifier, $existingNode !== null ? $existingNode->getLabel() : '', $nodeData['nodeType'], $this->getRelativePath($nodeData['path'], $documentPath), $nodeData['dimensionValues'], $problem, $nodeData['path']);
             }
             $closestDocument = $existingNode !== null ? $this->getClosestDocumentNode($existingNode) : null;
             if ($existingNode !== null && ($closestDocument === null || $closestDocument->getIdentifier() !== $documentIdentifier)) {
@@ -497,7 +505,7 @@ class RevisionService
                     'message' => $closestDocument !== null
                         ? sprintf('The content "%s" was moved to page "%s"', $existingNode->getLabel(), $closestDocument->getLabel())
                         : sprintf('The content "%s" was moved to an unknown page', $existingNode->getLabel()),
-                ]);
+                ], $nodeData['path']);
                 $rows[$identifier]['document'] = $closestDocument !== null ? ['identifier' => $closestDocument->getIdentifier(), 'label' => $closestDocument->getLabel()] : null;
                 $this->collectContentMovedHere($existingNode, $variantsInRevision, $revisionDate, [$identifier], [], $identifier, $candidates);
             }
@@ -514,7 +522,7 @@ class RevisionService
 
         $choices = [];
         foreach ($resolutions as $identifier => $resolution) {
-            $choice = $this->parseResolution((string)$identifier, $resolution, $documentIdentifier, $pathsByIdentifier, $candidates, $movedAway, $errors);
+            $choice = $this->parseResolution((string)$identifier, $resolution, $documentIdentifier, $revisionVariants, $candidates, $movedAway, $errors);
             if ($choice !== null) {
                 $choices[(string)$identifier] = $choice;
             }
@@ -548,13 +556,18 @@ class RevisionService
             }
         }
         $skippedPaths = [];
-        foreach (array_keys(array_intersect_key($pathsByIdentifier, $keptIdentifiers)) as $identifier) {
-            foreach (array_keys($pathsByIdentifier[$identifier]) as $path) {
-                $skippedPaths[] = $path . '/';
+        foreach (array_intersect_key($revisionVariants, $keptIdentifiers) as $variants) {
+            foreach ($variants as $variant) {
+                $skippedPaths[$variant['dimensionsHash']][] = $variant['path'] . '/';
             }
         }
-        foreach (array_keys($rows) as $identifier) {
-            if ($this->isInsideAnyPath(array_keys($pathsByIdentifier[$identifier]), $skippedPaths)) {
+        foreach ($rows as $identifier => $row) {
+            foreach ($row['variants'] as $variantKey => $variant) {
+                if ($this->isInsideSkippedNode((string)$variant['revisionPath'], $variant['dimensionsHash'], $skippedPaths)) {
+                    unset($rows[$identifier]['variants'][$variantKey]);
+                }
+            }
+            if ($rows[$identifier]['variants'] === []) {
                 unset($rows[$identifier]);
             }
         }
@@ -571,7 +584,7 @@ class RevisionService
                 $this->addRow($rows, $identifier, $variant->getLabel(), $variant->getNodeType()->getName(), $this->getRelativePath($variant->getPath(), $closestDocument !== null ? $closestDocument->getPath() : ''), $variant->getDimensions(), [
                     'id' => 'movedHere',
                     'message' => sprintf('The content "%s" was moved to the page after the revision was created', $variant->getLabel()),
-                ]);
+                ], null);
                 // Content created after the revision is removed, unless it holds content that is kept
                 if (($choices[$identifier] ?? null) === self::RESOLUTION_SKIP) {
                     $protectedVariants += array_fill_keys($candidateVariant['youngAncestors'], true);
@@ -581,22 +594,15 @@ class RevisionService
 
         $isApplicable = $errors === [];
         foreach ($rows as $identifier => $row) {
-            $rowChoices = [self::RESOLUTION_SKIP];
-            // A node whose variants need different resolutions can only be left as it is
-            if (isset($row['problems']['movedAway']) && !isset($row['problems']['movedHere']) && $movedAway[$identifier]['canMoveBack']) {
-                $rowChoices[] = self::RESOLUTION_MOVE_BACK;
-            }
-            if (isset($row['problems']['movedHere']) && count($row['problems']) === 1) {
-                $rowChoices[] = self::RESOLUTION_REMOVE;
-            }
-            $rows[$identifier] = $this->finishRow($row, $rowChoices, $choices[$identifier] ?? null);
+            $rows[$identifier] = $this->finishRow($row, $movedAway[$identifier]['canMoveBack'] ?? false, $choices[$identifier] ?? null);
             if ($rows[$identifier]['resolution'] === null) {
                 $isApplicable = false;
             }
         }
         $nodesToStage = [];
         foreach ($nodesInRevision as $nodeData) {
-            if (!$nodeData['removed'] && !isset($keptIdentifiers[$nodeData['identifier']]) && !$this->isInsideAnyPath([$nodeData['path']], $skippedPaths)) {
+            if (!$nodeData['removed'] && !isset($keptIdentifiers[$nodeData['identifier']])
+                && !$this->isInsideSkippedNode($nodeData['path'], Utility::sortDimensionValueArrayAndReturnDimensionsHash($nodeData['dimensionValues']), $skippedPaths)) {
                 $nodesToStage[] = $nodeData;
             }
         }
@@ -659,18 +665,18 @@ class RevisionService
      * Returns the resolution a node gets, or null after adding to the errors why it cannot get it
      *
      * @param mixed $resolution
-     * @param array<string, array<string, bool>> $pathsByIdentifier
+     * @param array<string, array> $revisionVariants The variants of the revision's nodes by identifier
      * @param array<string, array> $candidates Content moved to the page since the revision
      * @param array<string, array> $movedAway Content moved to another page since the revision
      * @param array<string> $errors
      */
-    protected function parseResolution(string $identifier, $resolution, string $documentIdentifier, array $pathsByIdentifier, array $candidates, array $movedAway, array &$errors): ?string
+    protected function parseResolution(string $identifier, $resolution, string $documentIdentifier, array $revisionVariants, array $candidates, array $movedAway, array &$errors): ?string
     {
         if ($identifier === $documentIdentifier) {
             $errors[] = sprintf('Node "%s" is the document of the revision, which cannot be resolved', $identifier);
             return null;
         }
-        if (!isset($pathsByIdentifier[$identifier]) && !isset($candidates[$identifier])) {
+        if (!isset($revisionVariants[$identifier]) && !isset($candidates[$identifier])) {
             $errors[] = sprintf('Node "%s" is neither in the revision nor content moved to its page', $identifier);
             return null;
         }
@@ -703,8 +709,9 @@ class RevisionService
      * @param array<string, array> $rows
      * @param array<string, array<string>> $dimensions
      * @param array{id: string, message: string} $problem
+     * @param string|null $revisionPath The variant's path in the revision, which leaves the problem out inside a skipped node
      */
-    protected function addRow(array &$rows, string $identifier, string $label, string $nodeTypeName, string $path, array $dimensions, array $problem): void
+    protected function addRow(array &$rows, string $identifier, string $label, string $nodeTypeName, string $path, array $dimensions, array $problem, ?string $revisionPath): void
     {
         if (!isset($rows[$identifier])) {
             $nodeTypeLabel = $this->nodeTypeManager->hasNodeType($nodeTypeName) ? $this->translate($this->nodeTypeManager->getNodeType($nodeTypeName)->getLabel()) : '';
@@ -713,27 +720,43 @@ class RevisionService
                 'label' => $label !== '' ? $label : ($nodeTypeLabel ?: $nodeTypeName),
                 'nodeType' => ['name' => $nodeTypeName, 'label' => $nodeTypeLabel ?: $nodeTypeName],
                 'path' => $path,
-                'dimensions' => [],
-                'problems' => [],
                 'document' => null,
-                'choices' => [],
-                'resolution' => null,
+                'variants' => [],
             ];
         }
-        $rows[$identifier]['dimensions'][Utility::sortDimensionValueArrayAndReturnDimensionsHash($dimensions)] = $dimensions;
-        $rows[$identifier]['problems'][$problem['id']] = $problem;
+        $dimensionsHash = Utility::sortDimensionValueArrayAndReturnDimensionsHash($dimensions);
+        $rows[$identifier]['variants'][$dimensionsHash]['dimensions'] = $dimensions;
+        $rows[$identifier]['variants'][$dimensionsHash]['dimensionsHash'] = $dimensionsHash;
+        $rows[$identifier]['variants'][$dimensionsHash]['revisionPath'] = $revisionPath;
+        $rows[$identifier]['variants'][$dimensionsHash]['problems'][$problem['id']] = $problem;
     }
 
     /**
-     * @param array<string> $choices The resolutions the row offers
+     * Merges the problems of the row's variants and adds the resolutions they allow, skipping first
      */
-    protected function finishRow(array $row, array $choices, ?string $choice): array
+    protected function finishRow(array $row, bool $canMoveBack, ?string $choice): array
     {
-        $row['dimensions'] = array_values($row['dimensions']);
-        $row['problems'] = array_values($row['problems']);
-        $row['choices'] = $choices;
-        $row['resolution'] = in_array($choice, $choices, true) ? $choice : null;
-        return $row;
+        $dimensions = [];
+        $problems = [];
+        foreach ($row['variants'] as $variant) {
+            $dimensions[] = $variant['dimensions'];
+            $problems += $variant['problems'];
+        }
+        $choices = [self::RESOLUTION_SKIP];
+        // A node whose variants need different resolutions can only be left as it is
+        if (isset($problems['movedAway']) && !isset($problems['movedHere']) && $canMoveBack) {
+            $choices[] = self::RESOLUTION_MOVE_BACK;
+        }
+        if (isset($problems['movedHere']) && count($problems) === 1) {
+            $choices[] = self::RESOLUTION_REMOVE;
+        }
+        unset($row['variants']);
+        return $row + [
+            'dimensions' => $dimensions,
+            'problems' => array_values($problems),
+            'choices' => $choices,
+            'resolution' => in_array($choice, $choices, true) ? $choice : null,
+        ];
     }
 
     /**
@@ -798,15 +821,17 @@ class RevisionService
      * away with it
      *
      * @param string $path The path of the variant in the revision
-     * @param array<string, string> $identifiersByPath
+     * @param array<string, array<string, bool>> $identifiersByPath The nodes of the revision at each path, in any dimension
      * @param array<string, array> $movedAway
      */
     protected function movesWithAncestor(string $variantKey, string $path, array $identifiersByPath, array $movedAway): bool
     {
         for ($ancestorPath = NodePaths::getParentPath($path); $ancestorPath !== '/' && $ancestorPath !== ''; $ancestorPath = NodePaths::getParentPath($ancestorPath)) {
-            $ancestorIdentifier = $identifiersByPath[$ancestorPath] ?? null;
-            if ($ancestorIdentifier !== null && isset($movedAway[$ancestorIdentifier]['subtree'][$variantKey])) {
-                return true;
+            // Subtrees hold variants, so a node at the same path in another dimension does not match
+            foreach (array_keys($identifiersByPath[$ancestorPath] ?? []) as $ancestorIdentifier) {
+                if (isset($movedAway[$ancestorIdentifier]['subtree'][$variantKey])) {
+                    return true;
+                }
             }
         }
         return false;
@@ -840,16 +865,13 @@ class RevisionService
     }
 
     /**
-     * @param array<string> $paths
-     * @param array<string> $ancestorPaths Each with a trailing slash
+     * @param array<string, array<string>> $skippedPaths By dimensions hash, each path with a trailing slash
      */
-    protected function isInsideAnyPath(array $paths, array $ancestorPaths): bool
+    protected function isInsideSkippedNode(string $path, string $dimensionsHash, array $skippedPaths): bool
     {
-        foreach ($paths as $path) {
-            foreach ($ancestorPaths as $ancestorPath) {
-                if (strpos($path, $ancestorPath) === 0) {
-                    return true;
-                }
+        foreach ($skippedPaths[$dimensionsHash] ?? [] as $skippedPath) {
+            if (strpos($path, $skippedPath) === 0) {
+                return true;
             }
         }
         return false;
@@ -958,6 +980,10 @@ class RevisionService
             // Content moved within the page since the revision is moved back, content on another page only with
             // RESOLUTION_MOVE_BACK
             if ($node->getPath() !== $nodeData['path']) {
+                // resolveRevision() checked that the document is where the revision puts it
+                if ($nodeData['identifier'] === $documentIdentifier) {
+                    throw new RevisionNotApplicableException([], [sprintf('The document was moved to "%s" after the revision was checked, apply the revision again', $node->getPath())]);
+                }
                 $closestDocument = $this->getClosestDocumentNode($node);
                 $isOnThePage = $closestDocument !== null && $closestDocument->getIdentifier() === $documentIdentifier;
                 if (!$isOnThePage && !isset($variantsToMoveBack[$this->getVariantKey($nodeData)])) {
