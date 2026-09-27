@@ -44,6 +44,20 @@ We use semantic-versioning so every breaking change will increase the major-vers
 ./flow revision:list <NodeIdentifier>
 ```
 
+### Apply a revision
+
+```console
+./flow revision:apply <RevisionIdentifier>
+```
+
+Content moved to another page since the revision is moved back, and content moved to the page since then is
+removed. A file with resolutions, see [Applying a revision](#applying-a-revision), decides otherwise, and is required
+if a node type of the revision no longer fits:
+
+```console
+./flow revision:apply <RevisionIdentifier> --resolutions=resolutions.json
+```
+
 ### Flush all revisions
 
 ```console
@@ -93,8 +107,27 @@ Applying a revision publishes the restored page to live like an editor would. Ev
 or publishing signals, such as search indexing, frontend revalidation or automatic translation, behaves as for a
 manual publish.
 
-A revision is refused, with a list of the reasons, if one of its node types no longer exists or if a node it would
-create, move back or retype is no longer allowed in its parent.
+Some changes since the revision need a decision before it can be applied. The inspector lists them in a dialog, the
+CLI command prints them:
+
+- A node type of the revision no longer exists or is abstract, or a node would be created, moved back or retyped
+  where it is no longer allowed or where its parent no longer exists: skip the node.
+- Content was moved to another page: move it back, or leave it there.
+- Content was moved to this page and already existed when the revision was created: keep it, or remove it. Content
+  created after the revision is removed without asking.
+
+Skipping leaves the node and everything inside it as it is in live. Each decision is a resolution keyed by node
+identifier, with exactly one of `__skip`, `__moveBack` or `__remove` set to `true`:
+
+```json
+{
+    "<node identifier>": {"__skip": true},
+    "<identifier of content moved to another page>": {"__moveBack": true},
+    "<identifier of content moved to this page>": {"__remove": true}
+}
+```
+
+A revision whose document node no longer fits is refused, because the document itself is never resolved.
 
 By default the editor's node privileges are not evaluated, as in version 1.1.0. With
 `applyWithoutAuthorizationChecks: false`, applying a revision that would change a node the editor may not edit is

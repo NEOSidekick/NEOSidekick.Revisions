@@ -119,11 +119,48 @@ class RevisionCommandController extends CommandController
     /**
      * Apply a specific revision to the node it was created from
      *
+     * Content moved to another page since the revision is moved back, and content moved to the page since the
+     * revision is removed, unless the resolutions file decides otherwise. A revision whose node types no longer fit is
+     * refused, with the nodes that need a resolution.
+     *
+     * @param string $revisionIdentifier
+     * @param string|null $resolutions A JSON file with resolutions by node identifier, e.g. {"<node identifier>": {"__skip": true}}
      * @throws StopCommandException
      */
-    public function applyCommand(string $revisionIdentifier): void
+    public function applyCommand(string $revisionIdentifier, ?string $resolutions = null): void
     {
         [$revision, $node] = $this->getRevisionAndNode($revisionIdentifier);
+
+        $resolutionsByNode = $resolutions !== null ? $this->readResolutions($resolutions) : [];
+        $validation = $this->revisionService->validateRevision($revision, $resolutionsByNode);
+        // A default can bring further rows, e.g. for content moved into a node that is moved back
+        for ($round = 0; $round < 10; $round++) {
+            $defaults = $this->getDefaultResolutions($validation['rows'], $resolutionsByNode);
+            if ($defaults === []) {
+                break;
+            }
+            foreach ($defaults as $identifier => $default) {
+                $resolutionsByNode[$identifier] = [$default['resolution'] => true];
+                $this->outputLine($default['resolution'] === RevisionService::RESOLUTION_MOVE_BACK ? 'Moving back "%s" (%s): %s' : 'Removing "%s" (%s): %s', [$default['row']['label'], $identifier, implode(' ', array_column($default['row']['problems'], 'message'))]);
+            }
+            $validation = $this->revisionService->validateRevision($revision, $resolutionsByNode);
+        }
+        if (!$validation['isApplicable']) {
+            $this->outputLine('Revision cannot be applied:');
+            foreach ($validation['errors'] as $error) {
+                $this->outputLine('  %s', [$error]);
+            }
+            $unresolvedRows = array_filter($validation['rows'], static function (array $row): bool {
+                return $row['resolution'] === null;
+            });
+            if ($unresolvedRows !== []) {
+                $this->outputLine("\nThese nodes need a resolution in the file given with --resolutions:\n");
+                $this->output->outputTable(array_map(static function (array $row): array {
+                    return [$row['identifier'], $row['path'], implode("\n", array_column($row['problems'], 'message')), implode(', ', $row['choices'])];
+                }, $unresolvedRows), ['Node', 'Path', 'Problem', 'Resolutions']);
+            }
+            $this->quit(1);
+        }
 
         if (!$this->output->askConfirmation(
             sprintf(
@@ -140,7 +177,7 @@ class RevisionCommandController extends CommandController
 
         $this->outputLine('Applying revision "%s"', [$revisionIdentifier]);
         try {
-            $result = $this->revisionService->applyRevision($revisionIdentifier, $node->getParentPath());
+            $result = $this->revisionService->applyRevision($revisionIdentifier, $node->getParentPath(), $resolutionsByNode);
         } catch (RevisionNotApplicableException | RevisionApplyDeniedException $exception) {
             $this->outputLine('Revision cannot be applied:');
             $this->outputLine($exception->getMessage());
@@ -186,6 +223,46 @@ class RevisionCommandController extends CommandController
             return $carry;
         }, []);
         $this->output->outputTable($rows, $headers);
+    }
+
+    /**
+     * @return array<mixed>
+     * @throws StopCommandException
+     */
+    protected function readResolutions(string $path): array
+    {
+        $json = is_file($path) ? file_get_contents($path) : false;
+        $resolutions = $json !== false ? json_decode($json, true) : null;
+        if (!is_array($resolutions)) {
+            $this->outputLine('The resolutions file "%s" cannot be read as a JSON object', [$path]);
+            $this->quit(1);
+        }
+        return $resolutions;
+    }
+
+    /**
+     * Keeps the behaviour from before resolutions existed for the rows the file leaves open: content moved to another
+     * page is moved back, content moved to the page is removed
+     *
+     * @param array<array> $rows
+     * @param array<mixed> $resolutions
+     * @return array<string, array{resolution: string, row: array}>
+     */
+    protected function getDefaultResolutions(array $rows, array $resolutions): array
+    {
+        $defaults = [];
+        foreach ($rows as $row) {
+            if ($row['resolution'] !== null || isset($resolutions[$row['identifier']])) {
+                continue;
+            }
+            $problemIds = array_column($row['problems'], 'id');
+            if (in_array('movedAway', $problemIds, true) && in_array(RevisionService::RESOLUTION_MOVE_BACK, $row['choices'], true)) {
+                $defaults[$row['identifier']] = ['resolution' => RevisionService::RESOLUTION_MOVE_BACK, 'row' => $row];
+            } elseif (in_array('movedHere', $problemIds, true)) {
+                $defaults[$row['identifier']] = ['resolution' => RevisionService::RESOLUTION_REMOVE, 'row' => $row];
+            }
+        }
+        return $defaults;
     }
 
     /**
