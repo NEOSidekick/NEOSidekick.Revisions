@@ -105,8 +105,8 @@ Integrators who need a different behaviour during an apply can connect to the si
 
 ## Checks
 
-Every pull request and every push to `main` runs three checks in GitHub Actions (`.github/workflows/ci.yml`). None of
-them needs a database. To run them locally:
+Every pull request and every push to `main` runs six checks in GitHub Actions (`.github/workflows/ci.yml`), in seven
+jobs because PHP lint runs for two PHP versions. None of them needs a database. To run them locally:
 
 PHP lint, run in CI with PHP 7.4 and 8.3:
 
@@ -123,12 +123,24 @@ composer init --no-interaction --name=ci/distribution --type=project --stability
 composer config prefer-stable true
 composer config allow-plugins.neos/composer-plugin true
 composer config repositories.package path ../NEOSidekick.Revisions
-composer require 'neosidekick/revisions:*@dev' 'phpstan/phpstan:^2.1'
+composer require 'neosidekick/revisions:*@dev' 'phpstan/phpstan:2.2.16'
 vendor/bin/phpstan analyse --configuration ../NEOSidekick.Revisions/phpstan.neon
 ```
 
 A finding that no longer occurs has to be removed from the baseline as well. Regenerate it with
 `--generate-baseline ../NEOSidekick.Revisions/phpstan-baseline.neon` added to the last command.
+
+Composer manifest:
+
+```console
+composer validate --no-check-publish
+```
+
+Translation files, which must be well-formed XML:
+
+```console
+find Resources/Private/Translations -name '*.xlf' -print0 | xargs -0 xmllint --noout
+```
 
 Inspector build, with the Node version from `.nvmrc`. The committed `Plugin.js` must be exactly what the source builds
 to:
